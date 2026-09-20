@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aclkv"
+version = "0.1.0"
+description = "Access-Aware KV-Cache Sharing for Resource-Constrained RAG Serving (CSE 598 DISML project)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+  { name = "Sri Harshith Goli" },
+  { name = "Vedang Vasant Avaghade" },
+]
+dependencies = [
+  "numpy>=1.24",
+  "httpx>=0.25",
+  "tokenizers>=0.15",
+  "huggingface_hub>=0.20",
+  "rank_bm25>=0.2.2",
+  "pyarrow>=14",
+]
+
+[project.optional-dependencies]
+serve = ["vllm==0.29.0"]
+plot = ["matplotlib>=3.7"]
+dev = ["pytest>=7", "pytest-asyncio>=0.23", "matplotlib>=3.7"]
+
+# vLLM discovers this in every process (API server + EngineCore) via
+# vllm.plugins.load_general_plugins(). The plugin monkeypatches the block-hash
+# extra-key generator so that a request can carry several scope barriers.
+[project.entry-points."vllm.general_plugins"]
+aclkv_scoped_hash = "aclkv.vllm_plugin:register"
+
+[tool.setuptools.packages.find]
+include = ["aclkv*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

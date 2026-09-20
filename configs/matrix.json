@@ -1,0 +1,34 @@
+{
+  "model": "Qwen/Qwen2.5-7B-Instruct",
+  "tokenizer": "Qwen/Qwen2.5-7B-Instruct",
+  "chat_format": "qwen2.5",
+  "block_size": 16,
+  "max_tokens": 48,
+  "kv_gib": [1, 2, 4],
+  "share_rates": [0.0, 0.25, 0.5, 0.75],
+  "concurrency": [4, 16],
+  "policies": ["B0", "B1", "B2", "B3", "B4", "B5", "UB"],
+  "acl_mixes": {
+    "default": [0.5, 0.3, 0.2],
+    "restrictive": [0.2, 0.4, 0.4],
+    "open": [0.8, 0.15, 0.05]
+  },
+  "workload": {
+    "n_users": 20,
+    "n_groups": 5,
+    "groups_per_user": 2,
+    "n_requests": 400,
+    "docs_per_request": 10,
+    "question_pool_size": 200,
+    "hot_pool_size": 64,
+    "zipf_s": 1.0,
+    "seed": 0
+  },
+  "quick": {
+    "kv_gib": [2],
+    "share_rates": [0.0, 0.5],
+    "concurrency": [16],
+    "policies": ["B0", "B1", "B3", "B4", "B5", "UB"],
+    "n_requests": 200
+  }
+}
