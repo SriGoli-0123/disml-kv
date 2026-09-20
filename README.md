@@ -177,6 +177,13 @@ Useful knobs: `MODEL=Qwen/Qwen3-8B CHAT_FORMAT=qwen3` (Qwen3 non-thinking templa
 
 ### 4.1 Baselines and improvements (simulator, real HotpotQA prompts, 20 users / 5 groups / 400 requests)
 
+Pre-computed simulator outputs are checked in under [`docs/`](docs/): figures in
+[`docs/plots/`](docs/plots/), the full sweep in [`docs/sim/sim_matrix_summary.csv`](docs/sim/sim_matrix_summary.csv)
+and its tables in [`docs/sim/sim_summary.md`](docs/sim/sim_summary.md).
+
+![cached tokens, default mix](docs/plots/sim_cached_mix0.50-0.30-0.20_c16.png)
+![evictions vs KV budget, default mix](docs/plots/sim_evictions_mix0.50-0.30-0.20_c16.png)
+
 Cached prompt tokens (%) — ACL mix 0.5/0.3/0.2 (chunk level), KV = 2 GiB, concurrency 16,
 Qwen2.5-7B-Instruct tokenization (mean prompt 1.5k–2.1k tokens). Full tables: run step 2.
 
@@ -208,11 +215,24 @@ Reading the table:
   per-request relevance rank. The reuse-aware order (B5) places hot chunks in a canonical
   order and reaches **29–48% cached tokens** at 25–75% shared-document rate — 8–13× the safe
   per-user baseline — and cuts evictions from ~48k to ~25k blocks at share 0.75 / 2 GiB.
+* **Why B5 rises steeply while the others stay flat.** Prefix caching only reuses an *exact*
+  prefix. Under retrieval order the first document after the preamble is question-specific
+  (168 distinct first docs in 400 requests) and the hot documents added by `share_rate` are
+  ranked at positions 6–9 by BM25, behind question-specific docs, so they never contribute
+  to a prefix match. B5 moves hot chunks to the front in a canonical order (16 distinct first
+  docs; 384/400 requests start with a doc seen before). Second, B3's latent sharing comes from
+  exact question repeats (237/400 requests) that are a median of 80 requests apart, while a
+  2 GiB cache holds ~21 requests of KV, so those blocks are evicted before they are reused
+  (B3 reaches 30% only with an unlimited cache; B5 is budget-insensitive: 41 → 42 → 43.5%
+  at 2 / 4 / ∞ GiB). Under memory pressure, *where in the prompt* and *how recently* shared
+  content appears matters more than how much is shared.
 * **Break-even (RQ3).** At share rate 0 there is nothing hot; B5 falls slightly *below* B3
   (7.9 vs 10.2%) because a repeated question is promoted to canonical order only on its second
   appearance. Below ~10–15% shared documents plain B3 is the better choice; the simulator
   sweep locates the crossover for any workload/mix. With the restrictive mix (0.2/0.4/0.4)
   B5 still reaches 11–22% while B3 stays ≈ 8–9%.
+
+![cached tokens, restrictive mix](docs/plots/sim_cached_mix0.20-0.40-0.40_c16.png)
 * **Cache pressure.** At 1 GiB (≈18.7k tokens for this model) sixteen 1.6–2k-token requests do
   not fit, so effective concurrency drops (`stalls` in the CSV, `preemptions`/waiting requests
   on the live server); reuse still helps because fewer blocks are recomputed, but absolute
@@ -278,4 +298,5 @@ configs/matrix.json   experiment matrix (model, budgets, share rates, concurrenc
 tests/            42 unit tests (ACL algebra, scope encoding, ordering, context, plugin, simulator, client)
 data/             raw/, prepared/ (corpus.jsonl, questions.jsonl), workloads/   (generated, git-ignored)
 results/          sim/, bench/, security_probe*.json, summary.md, plots/         (git-ignored)
+docs/             checked-in simulator outputs: plots/ (PNG), sim/ (CSV + Markdown tables)
 ```
