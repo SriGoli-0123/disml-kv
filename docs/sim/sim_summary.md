@@ -17,6 +17,8 @@ Cached prompt tokens (%) by shared-document rate:
 | UB | 6.6 | 6.0 | 6.2 | 6.8 | 27516 |
 | UB-order | 5.7 | 5.1 | 5.6 | 6.2 | 14190 |
 | UB-reuse | 5.0 | 10.2 | 16.1 | 20.6 | 14190 |
+| UB-anchor | 5.1 | 10.2 | 16.1 | 20.7 | 16392 |
+| B6 | 5.1 | 10.2 | 16.1 | 20.7 | 0 |
 
 Evictions (blocks) by shared-document rate:
 
@@ -31,6 +33,8 @@ Evictions (blocks) by shared-document rate:
 | UB | 34988 | 35222 | 34508 | 33468 |
 | UB-order | 35326 | 35559 | 34734 | 33676 |
 | UB-reuse | 35569 | 33631 | 30837 | 28472 |
+| UB-anchor | 35548 | 33652 | 30837 | 28465 |
+| B6 | 35548 | 33652 | 30837 | 28465 |
 
 ### ACL mix 0.20/0.40/0.40 (public/group/private), KV = 1 GiB, concurrency = 4
 
@@ -47,6 +51,8 @@ Cached prompt tokens (%) by shared-document rate:
 | UB | 6.6 | 6.1 | 6.2 | 6.8 | 27516 |
 | UB-order | 5.7 | 5.1 | 5.6 | 6.2 | 14190 |
 | UB-reuse | 5.0 | 10.2 | 16.2 | 20.6 | 14190 |
+| UB-anchor | 5.1 | 10.2 | 16.2 | 20.7 | 16392 |
+| B6 | 5.1 | 10.2 | 16.2 | 20.7 | 0 |
 
 Evictions (blocks) by shared-document rate:
 
@@ -61,6 +67,8 @@ Evictions (blocks) by shared-document rate:
 | UB | 34975 | 35195 | 34500 | 33448 |
 | UB-order | 35319 | 35547 | 34726 | 33662 |
 | UB-reuse | 35562 | 33624 | 30809 | 28464 |
+| UB-anchor | 35541 | 33645 | 30809 | 28457 |
+| B6 | 35541 | 33645 | 30809 | 28457 |
 
 ### ACL mix 0.20/0.40/0.40 (public/group/private), KV = 2 GiB, concurrency = 16
 
@@ -77,6 +85,8 @@ Cached prompt tokens (%) by shared-document rate:
 | UB | 9.2 | 8.5 | 8.2 | 8.6 | 27516 |
 | UB-order | 7.0 | 6.5 | 7.0 | 7.3 | 14190 |
 | UB-reuse | 6.3 | 11.1 | 17.4 | 22.1 | 14190 |
+| UB-anchor | 6.1 | 11.1 | 17.4 | 22.1 | 16392 |
+| B6 | 6.1 | 11.1 | 17.4 | 22.1 | 0 |
 
 Evictions (blocks) by shared-document rate:
 
@@ -91,6 +101,8 @@ Evictions (blocks) by shared-document rate:
 | UB | 32851 | 33104 | 32617 | 31652 |
 | UB-order | 33678 | 33877 | 33068 | 32123 |
 | UB-reuse | 33921 | 32125 | 29199 | 26779 |
+| UB-anchor | 34011 | 32150 | 29219 | 26772 |
+| B6 | 34011 | 32150 | 29219 | 26772 |
 
 ### ACL mix 0.20/0.40/0.40 (public/group/private), KV = 2 GiB, concurrency = 4
 
@@ -107,6 +119,8 @@ Cached prompt tokens (%) by shared-document rate:
 | UB | 9.2 | 8.6 | 8.2 | 8.6 | 27516 |
 | UB-order | 7.0 | 6.5 | 7.0 | 7.3 | 14190 |
 | UB-reuse | 6.3 | 11.2 | 17.4 | 22.1 | 14190 |
+| UB-anchor | 6.1 | 11.1 | 17.4 | 22.1 | 16392 |
+| B6 | 6.1 | 11.1 | 17.4 | 22.1 | 0 |
 
 Evictions (blocks) by shared-document rate:
 
@@ -121,6 +135,8 @@ Evictions (blocks) by shared-document rate:
 | UB | 32815 | 33070 | 32605 | 31630 |
 | UB-order | 33655 | 33863 | 33056 | 32112 |
 | UB-reuse | 33898 | 32102 | 29187 | 26768 |
+| UB-anchor | 33999 | 32132 | 29207 | 26761 |
+| B6 | 33999 | 32132 | 29207 | 26761 |
 
 ### ACL mix 0.20/0.40/0.40 (public/group/private), KV = 4 GiB, concurrency = 16
 
@@ -137,6 +153,8 @@ Cached prompt tokens (%) by shared-document rate:
 | UB | 12.8 | 11.4 | 12.7 | 12.8 | 27516 |
 | UB-order | 8.8 | 8.0 | 9.5 | 9.5 | 14190 |
 | UB-reuse | 8.0 | 12.2 | 18.5 | 23.2 | 14190 |
+| UB-anchor | 7.0 | 11.9 | 18.5 | 23.2 | 16392 |
+| B6 | 7.0 | 11.9 | 18.5 | 23.2 | 0 |
 
 Evictions (blocks) by shared-document rate:
 
@@ -151,6 +169,8 @@ Evictions (blocks) by shared-document rate:
 | UB | 29156 | 29698 | 28597 | 27809 |
 | UB-order | 30642 | 30968 | 29784 | 28989 |
 | UB-reuse | 30936 | 29376 | 26450 | 24029 |
+| UB-anchor | 31317 | 29506 | 26477 | 24036 |
+| B6 | 31317 | 29506 | 26477 | 24036 |
 
 ### ACL mix 0.20/0.40/0.40 (public/group/private), KV = 4 GiB, concurrency = 4
 
@@ -167,6 +187,8 @@ Cached prompt tokens (%) by shared-document rate:
 | UB | 12.8 | 11.4 | 12.8 | 12.8 | 27516 |
 | UB-order | 8.8 | 8.0 | 9.5 | 9.5 | 14190 |
 | UB-reuse | 8.0 | 12.2 | 18.5 | 23.2 | 14190 |
+| UB-anchor | 7.0 | 11.9 | 18.5 | 23.2 | 16392 |
+| B6 | 7.0 | 11.9 | 18.5 | 23.2 | 0 |
 
 Evictions (blocks) by shared-document rate:
 
@@ -181,6 +203,8 @@ Evictions (blocks) by shared-document rate:
 | UB | 29132 | 29674 | 28572 | 27788 |
 | UB-order | 30622 | 30945 | 29771 | 28978 |
 | UB-reuse | 30924 | 29364 | 26438 | 24017 |
+| UB-anchor | 31305 | 29494 | 26465 | 24024 |
+| B6 | 31305 | 29494 | 26465 | 24024 |
 
 ### ACL mix 0.50/0.30/0.20 (public/group/private), KV = 1 GiB, concurrency = 16
 
@@ -197,6 +221,8 @@ Cached prompt tokens (%) by shared-document rate:
 | UB | 7.2 | 4.9 | 5.6 | 4.7 | 28692 |
 | UB-order | 6.8 | 5.2 | 5.5 | 4.5 | 6382 |
 | UB-reuse | 5.8 | 28.4 | 40.1 | 46.8 | 6382 |
+| UB-anchor | 5.5 | 28.4 | 40.1 | 46.8 | 9787 |
+| B6 | 5.5 | 28.4 | 40.1 | 46.8 | 0 |
 
 Evictions (blocks) by shared-document rate:
 
@@ -211,6 +237,8 @@ Evictions (blocks) by shared-document rate:
 | UB | 35865 | 44781 | 48104 | 48935 |
 | UB-order | 35984 | 44625 | 48150 | 49039 |
 | UB-reuse | 36404 | 33687 | 30478 | 27263 |
+| UB-anchor | 36512 | 33671 | 30478 | 27252 |
+| B6 | 36512 | 33671 | 30478 | 27252 |
 
 ### ACL mix 0.50/0.30/0.20 (public/group/private), KV = 1 GiB, concurrency = 4
 
@@ -227,6 +255,8 @@ Cached prompt tokens (%) by shared-document rate:
 | UB | 7.2 | 4.9 | 5.6 | 4.7 | 28692 |
 | UB-order | 6.9 | 5.2 | 5.5 | 4.5 | 6382 |
 | UB-reuse | 5.8 | 28.4 | 40.1 | 46.8 | 6382 |
+| UB-anchor | 5.5 | 28.4 | 40.1 | 46.8 | 9787 |
+| B6 | 5.5 | 28.4 | 40.1 | 46.8 | 0 |
 
 Evictions (blocks) by shared-document rate:
 
@@ -241,6 +271,8 @@ Evictions (blocks) by shared-document rate:
 | UB | 35840 | 44777 | 48101 | 48928 |
 | UB-order | 35959 | 44621 | 48147 | 49032 |
 | UB-reuse | 36385 | 33667 | 30458 | 27246 |
+| UB-anchor | 36493 | 33651 | 30458 | 27235 |
+| B6 | 36493 | 33651 | 30458 | 27235 |
 
 ### ACL mix 0.50/0.30/0.20 (public/group/private), KV = 2 GiB, concurrency = 16
 
@@ -257,6 +289,8 @@ Cached prompt tokens (%) by shared-document rate:
 | UB | 10.2 | 6.8 | 7.0 | 6.0 | 28692 |
 | UB-order | 9.4 | 7.1 | 7.1 | 5.5 | 6382 |
 | UB-reuse | 7.9 | 29.2 | 41.2 | 48.1 | 6382 |
+| UB-anchor | 7.3 | 29.3 | 41.2 | 48.1 | 9787 |
+| B6 | 7.3 | 29.3 | 41.2 | 48.1 | 0 |
 
 Evictions (blocks) by shared-document rate:
 
@@ -271,6 +305,8 @@ Evictions (blocks) by shared-document rate:
 | UB | 33536 | 42738 | 46217 | 47089 |
 | UB-order | 33811 | 42605 | 46190 | 47329 |
 | UB-reuse | 34422 | 32122 | 28730 | 25431 |
+| UB-anchor | 34652 | 32106 | 28730 | 25420 |
+| B6 | 34652 | 32106 | 28730 | 25420 |
 
 ### ACL mix 0.50/0.30/0.20 (public/group/private), KV = 2 GiB, concurrency = 4
 
@@ -287,6 +323,8 @@ Cached prompt tokens (%) by shared-document rate:
 | UB | 10.2 | 6.8 | 7.0 | 6.0 | 28692 |
 | UB-order | 9.4 | 7.1 | 7.1 | 5.6 | 6382 |
 | UB-reuse | 7.9 | 29.3 | 41.2 | 48.1 | 6382 |
+| UB-anchor | 7.3 | 29.3 | 41.2 | 48.1 | 9787 |
+| B6 | 7.3 | 29.3 | 41.2 | 48.1 | 0 |
 
 Evictions (blocks) by shared-document rate:
 
@@ -301,6 +339,8 @@ Evictions (blocks) by shared-document rate:
 | UB | 33524 | 42715 | 46205 | 47077 |
 | UB-order | 33799 | 42593 | 46178 | 47308 |
 | UB-reuse | 34410 | 32098 | 28716 | 25419 |
+| UB-anchor | 34640 | 32082 | 28716 | 25408 |
+| B6 | 34640 | 32082 | 28716 | 25408 |
 
 ### ACL mix 0.50/0.30/0.20 (public/group/private), KV = 4 GiB, concurrency = 16
 
@@ -317,6 +357,8 @@ Cached prompt tokens (%) by shared-document rate:
 | UB | 14.1 | 12.1 | 10.2 | 9.9 | 28692 |
 | UB-order | 13.6 | 11.9 | 9.8 | 9.3 | 6382 |
 | UB-reuse | 11.7 | 30.6 | 42.0 | 49.0 | 6382 |
+| UB-anchor | 9.8 | 30.5 | 42.0 | 49.1 | 9787 |
+| B6 | 9.8 | 30.5 | 42.0 | 49.1 | 0 |
 
 Evictions (blocks) by shared-document rate:
 
@@ -331,6 +373,8 @@ Evictions (blocks) by shared-document rate:
 | UB | 29661 | 37897 | 42276 | 42748 |
 | UB-order | 29857 | 37984 | 42453 | 43036 |
 | UB-reuse | 30615 | 29144 | 25982 | 22588 |
+| UB-anchor | 31312 | 29177 | 25982 | 22577 |
+| B6 | 31312 | 29177 | 25982 | 22577 |
 
 ### ACL mix 0.50/0.30/0.20 (public/group/private), KV = 4 GiB, concurrency = 4
 
@@ -347,6 +391,8 @@ Cached prompt tokens (%) by shared-document rate:
 | UB | 14.2 | 12.1 | 10.2 | 9.9 | 28692 |
 | UB-order | 13.6 | 11.9 | 9.8 | 9.4 | 6382 |
 | UB-reuse | 11.7 | 30.6 | 42.0 | 49.0 | 6382 |
+| UB-anchor | 9.9 | 30.5 | 42.0 | 49.1 | 9787 |
+| B6 | 9.9 | 30.5 | 42.0 | 49.1 | 0 |
 
 Evictions (blocks) by shared-document rate:
 
@@ -361,6 +407,8 @@ Evictions (blocks) by shared-document rate:
 | UB | 29630 | 37885 | 42240 | 42724 |
 | UB-order | 29833 | 37972 | 42417 | 43005 |
 | UB-reuse | 30600 | 29132 | 25970 | 22576 |
+| UB-anchor | 31288 | 29165 | 25970 | 22565 |
+| B6 | 31288 | 29165 | 25970 | 22565 |
 
 ### ACL mix 0.80/0.15/0.05 (public/group/private), KV = 1 GiB, concurrency = 16
 
@@ -377,6 +425,8 @@ Cached prompt tokens (%) by shared-document rate:
 | UB | 7.5 | 8.5 | 7.4 | 6.6 | 14402 |
 | UB-order | 8.2 | 8.8 | 7.4 | 6.5 | 3180 |
 | UB-reuse | 6.7 | 10.4 | 16.6 | 23.7 | 3180 |
+| UB-anchor | 6.0 | 10.4 | 16.6 | 23.7 | 6176 |
+| B6 | 6.0 | 10.4 | 16.6 | 23.7 | 0 |
 
 Evictions (blocks) by shared-document rate:
 
@@ -391,6 +441,8 @@ Evictions (blocks) by shared-document rate:
 | UB | 35321 | 33410 | 32540 | 32550 |
 | UB-order | 35065 | 33279 | 32550 | 32579 |
 | UB-reuse | 35644 | 32686 | 29311 | 26568 |
+| UB-anchor | 35885 | 32686 | 29311 | 26568 |
+| B6 | 35885 | 32686 | 29311 | 26568 |
 
 ### ACL mix 0.80/0.15/0.05 (public/group/private), KV = 1 GiB, concurrency = 4
 
@@ -407,6 +459,8 @@ Cached prompt tokens (%) by shared-document rate:
 | UB | 7.6 | 8.5 | 7.4 | 6.6 | 14402 |
 | UB-order | 8.2 | 8.9 | 7.4 | 6.5 | 3180 |
 | UB-reuse | 6.7 | 10.5 | 16.6 | 23.7 | 3180 |
+| UB-anchor | 6.0 | 10.5 | 16.6 | 23.7 | 6176 |
+| B6 | 6.0 | 10.5 | 16.6 | 23.7 | 0 |
 
 Evictions (blocks) by shared-document rate:
 
@@ -421,6 +475,8 @@ Evictions (blocks) by shared-document rate:
 | UB | 35295 | 33379 | 32527 | 32542 |
 | UB-order | 35036 | 33248 | 32534 | 32571 |
 | UB-reuse | 35637 | 32670 | 29273 | 26559 |
+| UB-anchor | 35878 | 32670 | 29273 | 26559 |
+| B6 | 35878 | 32670 | 29273 | 26559 |
 
 ### ACL mix 0.80/0.15/0.05 (public/group/private), KV = 2 GiB, concurrency = 16
 
@@ -437,6 +493,8 @@ Cached prompt tokens (%) by shared-document rate:
 | UB | 10.8 | 12.1 | 10.8 | 8.9 | 14402 |
 | UB-order | 12.4 | 13.7 | 11.1 | 8.7 | 3180 |
 | UB-reuse | 10.1 | 11.6 | 18.7 | 26.3 | 3180 |
+| UB-anchor | 8.6 | 11.6 | 18.8 | 26.3 | 6176 |
+| B6 | 8.6 | 11.6 | 18.8 | 26.3 | 0 |
 
 Evictions (blocks) by shared-document rate:
 
@@ -451,6 +509,8 @@ Evictions (blocks) by shared-document rate:
 | UB | 32880 | 30901 | 30183 | 30571 |
 | UB-order | 32287 | 30338 | 30087 | 30645 |
 | UB-reuse | 33169 | 31086 | 27382 | 24501 |
+| UB-anchor | 33751 | 31110 | 27368 | 24501 |
+| B6 | 33751 | 31110 | 27368 | 24501 |
 
 ### ACL mix 0.80/0.15/0.05 (public/group/private), KV = 2 GiB, concurrency = 4
 
@@ -467,6 +527,8 @@ Cached prompt tokens (%) by shared-document rate:
 | UB | 10.8 | 12.2 | 10.8 | 8.9 | 14402 |
 | UB-order | 12.4 | 13.7 | 11.1 | 8.7 | 3180 |
 | UB-reuse | 10.1 | 11.6 | 18.7 | 26.3 | 3180 |
+| UB-anchor | 8.6 | 11.6 | 18.8 | 26.3 | 6176 |
+| B6 | 8.6 | 11.6 | 18.8 | 26.3 | 0 |
 
 Evictions (blocks) by shared-document rate:
 
@@ -481,6 +543,8 @@ Evictions (blocks) by shared-document rate:
 | UB | 32870 | 30867 | 30152 | 30560 |
 | UB-order | 32277 | 30304 | 30054 | 30634 |
 | UB-reuse | 33147 | 31074 | 27364 | 24487 |
+| UB-anchor | 33729 | 31098 | 27350 | 24487 |
+| B6 | 33729 | 31098 | 27350 | 24487 |
 
 ### ACL mix 0.80/0.15/0.05 (public/group/private), KV = 4 GiB, concurrency = 16
 
@@ -497,6 +561,8 @@ Cached prompt tokens (%) by shared-document rate:
 | UB | 16.9 | 19.2 | 14.9 | 13.0 | 14402 |
 | UB-order | 19.4 | 21.8 | 15.3 | 12.7 | 3180 |
 | UB-reuse | 16.9 | 13.0 | 20.3 | 27.8 | 3180 |
+| UB-anchor | 14.0 | 12.9 | 20.3 | 27.8 | 6176 |
+| B6 | 14.0 | 12.9 | 20.3 | 27.8 | 0 |
 
 Evictions (blocks) by shared-document rate:
 
@@ -511,6 +577,8 @@ Evictions (blocks) by shared-document rate:
 | UB | 28199 | 25962 | 26393 | 26800 |
 | UB-order | 27257 | 25020 | 26257 | 26909 |
 | UB-reuse | 28203 | 28241 | 24493 | 21624 |
+| UB-anchor | 29341 | 28271 | 24486 | 21624 |
+| B6 | 29341 | 28271 | 24486 | 21624 |
 
 ### ACL mix 0.80/0.15/0.05 (public/group/private), KV = 4 GiB, concurrency = 4
 
@@ -527,6 +595,8 @@ Cached prompt tokens (%) by shared-document rate:
 | UB | 17.0 | 19.3 | 14.9 | 13.1 | 14402 |
 | UB-order | 19.4 | 21.8 | 15.3 | 12.8 | 3180 |
 | UB-reuse | 17.0 | 13.0 | 20.3 | 27.8 | 3180 |
+| UB-anchor | 14.0 | 12.9 | 20.3 | 27.8 | 6176 |
+| B6 | 14.0 | 12.9 | 20.3 | 27.8 | 0 |
 
 Evictions (blocks) by shared-document rate:
 
@@ -541,3 +611,5 @@ Evictions (blocks) by shared-document rate:
 | UB | 28167 | 25932 | 26381 | 26777 |
 | UB-order | 27225 | 25008 | 26245 | 26886 |
 | UB-reuse | 28181 | 28229 | 24481 | 21613 |
+| UB-anchor | 29308 | 28259 | 24474 | 21613 |
+| B6 | 29308 | 28259 | 24474 | 21613 |

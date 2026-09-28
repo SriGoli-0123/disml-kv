@@ -34,6 +34,7 @@ class Policy:
     ordering: str
     description: str
     secure: bool = True
+    anchor_k: int = 0        # documents pinned immediately before the question
 
 
 POLICIES: dict[str, Policy] = {
@@ -43,9 +44,11 @@ POLICIES: dict[str, Policy] = {
     "B3": Policy("B3", "acl_scope", "retrieval", "ACL-derived multi-scope caching, retrieval order"),
     "B4": Policy("B4", "acl_scope", "acl_aware", "B3 + access-aware (broad-to-narrow) ordering"),
     "B5": Policy("B5", "acl_scope", "reuse_aware", "B3 + reuse-aware ordering (stretch goal)"),
+    "B6": Policy("B6", "acl_scope", "reuse_aware", "B5 + relevance anchor: top-2 retrieved docs pinned before the question", anchor_k=2),
     "UB": Policy("UB", "global", "retrieval", "INSECURE global sharing (upper bound)", secure=False),
     "UB-order": Policy("UB-order", "global", "acl_aware", "INSECURE global sharing + ACL-aware order", secure=False),
     "UB-reuse": Policy("UB-reuse", "global", "reuse_aware", "INSECURE global sharing + reuse-aware order", secure=False),
+    "UB-anchor": Policy("UB-anchor", "global", "reuse_aware", "INSECURE global sharing + reuse-aware order + anchor", secure=False, anchor_k=2),
 }
 
 

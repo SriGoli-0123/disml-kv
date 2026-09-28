@@ -112,7 +112,7 @@ def test_matrix_invariants(mini_data):
     settings = BuildSettings(tokenizer="fake", chat_format="plain", block_size=16)
     bld = make_builder(w, settings, FakeTokenizer())
     res = {}
-    for name in ["B0", "B1", "B2", "B3", "B4", "B5", "UB", "UB-order"]:
+    for name in ["B0", "B1", "B2", "B3", "B4", "B5", "B6", "UB", "UB-order"]:
         prompts = build_prompts(w, chunks, name, bld, settings)
         assert all(p.n_dropped_by_filter == 0 for p in prompts)
         _, s = simulate(prompts, num_blocks=20000, directory=w.directory, block_size=16, max_concurrency=8,
@@ -123,7 +123,7 @@ def test_matrix_invariants(mini_data):
     for name in res:
         assert res[name].unauthorized_hits == 0, name
     # adversarial probes: only the insecure upper bound leaks
-    for name in ["B1", "B2", "B3", "B4", "B5"]:
+    for name in ["B1", "B2", "B3", "B4", "B5", "B6"]:
         assert res[name].probe_requests > 0 and res[name].probe_unauthorized_hits == 0, name
     assert res["UB"].probe_unauthorized_hits > 0
     # efficiency ordering (B4 vs B3 is workload dependent — see README)
@@ -134,3 +134,8 @@ def test_matrix_invariants(mini_data):
     assert res["B3"].cached_tokens == res["UB"].cached_tokens
     assert res["B4"].cached_tokens == res["UB-order"].cached_tokens
     assert res["B5"].cached_tokens >= res["B4"].cached_tokens * 0.9
+    # the relevance anchor (B6) moves question-specific evidence next to the question;
+    # those docs were the source of prefix divergence anyway, so reuse is unchanged up to
+    # block-rounding effects (exactly equal on the HotpotQA workloads; <=1 block here)
+    assert res["B6"].cached_tokens >= res["B5"].cached_tokens - 2 * 16
+    assert res["B6"].probe_requests > 0 and res["B6"].probe_unauthorized_hits == 0

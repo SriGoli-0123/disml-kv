@@ -194,8 +194,10 @@ class ContextBuilder:
         # 1. authorization filter (defensive; the workload already enforces it)
         kept, dropped = authorization_filter(docs, user, self.directory)
         # 3. context builder: ordering
+        anchor_k = policy.anchor_k or ordering.anchor_k
         ordered = apply_ordering(policy.ordering, kept, popularity=ordering.popularity,
-                                 min_pop=ordering.min_pop, max_shift=ordering.max_shift)
+                                 min_pop=ordering.min_pop, max_shift=ordering.max_shift,
+                                 anchor_k=anchor_k)
         ordering.popularity.observe([d.chunk_id for d in ordered])
         # 2. prefix ACL propagation + 4. scope plan
         scopes: list[SegmentScope] = plan_scopes(policy.caching, user, ordered, self.key)

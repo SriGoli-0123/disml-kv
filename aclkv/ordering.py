@@ -128,22 +128,49 @@ def order_reuse_aware(
 ORDERINGS = ("retrieval", "acl_aware", "reuse_aware")
 
 
+def apply_relevance_anchor(docs: Sequence[RetrievedDoc], anchor_k: int) -> list[RetrievedDoc]:
+    """Move the ``anchor_k`` most relevant documents to the **end** of the prompt,
+    least-relevant-of-them first, so the single best-ranked document sits
+    immediately before the question.
+
+    Rationale (challenge C3): the two objectives want opposite ends of the
+    prompt.  A prefix-cache match runs left to right and dies at the first
+    question-specific document, so the cache only cares about the *front*.
+    Language models attend most strongly to the start and the end of a context
+    and least to the middle, and the answer is generated right after the
+    question, so answer quality cares most about the *back*.  Anchoring the
+    question-specific evidence at the back therefore costs the cache nothing —
+    those documents were the source of divergence wherever they sat — while
+    moving it out of the weak middle.
+    """
+    if anchor_k <= 0 or len(docs) <= 1:
+        return list(docs)
+    k = min(anchor_k, len(docs) - 1)          # never anchor the whole prompt
+    anchored = sorted(docs, key=lambda d: d.rank)[:k]
+    ids = {d.chunk_id for d in anchored}
+    head = [d for d in docs if d.chunk_id not in ids]
+    return head + sorted(anchored, key=lambda d: -d.rank)
+
+
 def apply_ordering(
     name: str,
     docs: Sequence[RetrievedDoc],
     popularity: PopularityTracker | None = None,
     min_pop: float = 1.0,
     max_shift: int | None = None,
+    anchor_k: int = 0,
 ) -> list[RetrievedDoc]:
     if name == "retrieval":
-        return order_retrieval(docs)
-    if name == "acl_aware":
-        return order_acl_aware(docs, max_shift=max_shift)
-    if name == "reuse_aware":
+        out = order_retrieval(docs)
+    elif name == "acl_aware":
+        out = order_acl_aware(docs, max_shift=max_shift)
+    elif name == "reuse_aware":
         if popularity is None:
             popularity = PopularityTracker()
-        return order_reuse_aware(docs, popularity, min_pop=min_pop, max_shift=max_shift)
-    raise ValueError(f"unknown ordering {name!r}")
+        out = order_reuse_aware(docs, popularity, min_pop=min_pop, max_shift=max_shift)
+    else:
+        raise ValueError(f"unknown ordering {name!r}")
+    return apply_relevance_anchor(out, anchor_k)
 
 
 @dataclass
@@ -151,4 +178,5 @@ class OrderingConfig:
     name: str = "retrieval"
     max_shift: int | None = None
     min_pop: float = 1.0
+    anchor_k: int = 0
     popularity: PopularityTracker = field(default_factory=PopularityTracker)

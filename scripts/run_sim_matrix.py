@@ -47,6 +47,7 @@ def main():
     ap.add_argument("--scope-mode", default="hash", choices=["hash", "marker"])
     ap.add_argument("--max-shift", type=int, default=None)
     ap.add_argument("--min-pop", type=float, default=1.0)
+    ap.add_argument("--anchor-k", type=int, default=0)
     ap.add_argument("--output-tokens", type=int, default=None)
     ap.add_argument("--probe-rate", type=float, default=0.25, help="fraction of requests followed by an adversarial replay")
     ap.add_argument("--probe-mode", default="no_salt", choices=["no_salt", "forged"])
@@ -72,7 +73,7 @@ def main():
     print(f"model={model}: {geom.bytes_per_token} bytes/token, {geom.bytes_per_block(cfg['block_size'])/1e6:.2f} MB/block")
     settings = BuildSettings(tokenizer=tok_name, chat_format=fmt, block_size=cfg["block_size"],
                              align_blocks=not args.no_align, scope_mode=args.scope_mode,
-                             max_shift=args.max_shift, min_pop=args.min_pop)
+                             max_shift=args.max_shift, min_pop=args.min_pop, anchor_k=args.anchor_k)
     tok = load_tokenizer(tok_name)
     out_dir = Path(args.out_dir) / args.tag
     out_dir.mkdir(parents=True, exist_ok=True)

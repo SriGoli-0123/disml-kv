@@ -24,6 +24,7 @@ Everything is inference-only: no training, no kernels, one small vLLM plugin.
 | **Idea A – ACL-derived multi-scope caching** (modified serving path) | [`aclkv/vllm_plugin.py`](aclkv/vllm_plugin.py) | vLLM *general plugin*; patches `generate_block_hash_extra_keys` so one request can carry several scope barriers; parent-hash chaining makes later blocks inherit the restriction |
 | **Idea B – access-aware ordering** | [`aclkv/ordering.py`](aclkv/ordering.py) `order_acl_aware` | broad→narrow, retrieval rank within class, `max_shift` bounds displacement (quality guard) |
 | **Idea C – reuse-aware ordering (stretch)** | `order_reuse_aware` | hot chunks (online decayed popularity) first in a *canonical* order, cold chunks by relevance |
+| **Relevance anchor** (answer to C3) | `apply_relevance_anchor` | the top-`k` retrieved documents are moved to the end of the prompt, best one adjacent to the question |
 | Context builder (block-aligned segments, token-id prompts) | [`aclkv/context.py`](aclkv/context.py) | pads each doc to a 16-token block so a doc's blocks never depend on the next doc |
 | Baselines B0–B4, stretch B5, insecure upper bounds | [`aclkv/policies.py`](aclkv/policies.py) | see table below |
 | Synthetic ACL workload over HotpotQA | [`aclkv/workload.py`](aclkv/workload.py), [`aclkv/data_prep.py`](aclkv/data_prep.py) | users/groups, ACL mix, shared-document rate, question pool, seeds |
@@ -41,6 +42,7 @@ Everything is inference-only: no training, no kernels, one small vLLM plugin.
 | **B3** | `acl_scope` | retrieval | ✓ | ACL-derived multi-scope caching (Idea A) |
 | **B4** | `acl_scope` | acl_aware | ✓ | B3 + access-aware ordering (Idea B) |
 | **B5** | `acl_scope` | reuse_aware | ✓ | B3 + reuse-aware ordering (Idea C, stretch) |
+| **B6** | `acl_scope` | reuse_aware + anchor | ✓ | B5 + relevance anchor: the top-2 retrieved documents are pinned immediately before the question (see §5.1) |
 | UB / UB-order / UB-reuse | `global` | retrieval / acl_aware / reuse_aware | ✗ | unrestricted sharing — efficiency upper bounds only |
 
 ### How a request flows
@@ -195,6 +197,7 @@ Qwen2.5-7B-Instruct tokenization (mean prompt 1.5k–2.1k tokens). Full tables: 
 | **B3 ACL scopes** | 10.2 | 6.8 | 7.0 | 6.0 | **0** |
 | **B4 + ACL-aware order** | 9.4 | 7.1 | 7.1 | 5.5 | **0** |
 | **B5 + reuse-aware order** | 7.9 | **29.2** | **41.2** | **48.1** | **0** |
+| **B6 + relevance anchor** | 7.3 | **29.3** | **41.2** | **48.1** | **0** |
 | UB global (insecure) | 10.2 | 6.8 | 7.0 | 6.0 | 28 692 |
 
 Reading the table:
@@ -226,6 +229,8 @@ Reading the table:
   (B3 reaches 30% only with an unlimited cache; B5 is budget-insensitive: 41 → 42 → 43.5%
   at 2 / 4 / ∞ GiB). Under memory pressure, *where in the prompt* and *how recently* shared
   content appears matters more than how much is shared.
+* **Ordering does not have to cost quality (RQ2).** B6 keeps every token of B5's reuse while
+  putting each request's best-ranked document immediately before its question — see §5.1.
 * **Break-even (RQ3).** At share rate 0 there is nothing hot; B5 falls slightly *below* B3
   (7.9 vs 10.2%) because a repeated question is promoted to canonical order only on its second
   appearance. Below ~10–15% shared documents plain B3 is the better choice; the simulator
@@ -270,6 +275,36 @@ Reading the table:
 ---
 
 ## 5. Design notes and limitations
+
+### 5.1 Ordering vs. answer quality: the relevance anchor (challenge C3)
+
+Canonical ordering creates reuse, but it also moves the documents that answer *this* question.
+Measured on the 50 %-overlap workload (position 0 = first document, 9 = last, i.e. adjacent to
+the question; "weak middle" = slots 2–7, where language models attend least):
+
+| ordering | median position of answer-bearing docs | answer docs in the weak middle | median position of the top-BM25 doc | cached tokens (2 GiB, share 0.5) |
+|---|---|---|---|---|
+| B3 retrieval order | 1.0 | 40 % | 0.0 | 7.0 % |
+| B4 ACL-aware order | 3.0 | 30 % | 0.0 | 7.1 % |
+| B5 reuse-aware order | 6.0 | **64 %** | 4.0 | 41.2 % |
+| **B6 = B5 + anchor (k=2)** | 8.0 | **42 %** | **9.0** | **41.2 %** |
+
+The two objectives want opposite ends of the prompt, which is what makes the fix free:
+
+* a prefix-cache match runs left to right and dies at the first question-specific document,
+  so the **cache only cares about the front**;
+* the answer is generated immediately after the question and attention is strongest at the
+  start and end of a context, so **quality cares most about the back**.
+
+`apply_relevance_anchor` therefore moves the top-`k` retrieved documents to the *end*, best one
+last. Those documents were the source of prefix divergence wherever they sat, so reuse is
+unchanged (identical to B5 at every share rate ≥ 0.25; ≤ 1 block different elsewhere) while the
+top-ranked document moves from the middle of the prompt to the slot next to the question.
+`--anchor-k` sweeps it; k = 2 was the best point on HotpotQA (which has two gold paragraphs).
+
+This is a *placement* proxy for quality, not a quality measurement — EM/F1 under each ordering
+still needs the A100 run (`--max-shift` and `--anchor-k` ablations are scripted in §3.3).
+
 
 * **Threat model.** The middleware is the trusted layer (as in vLLM's `cache_salt` design):
   it filters documents, derives scope ids with a secret key and never issues a scope id the

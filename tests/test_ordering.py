@@ -43,3 +43,35 @@ def test_reuse_aware_cold_equals_acl_aware_and_hot_is_canonical():
     # canonical: the same hot chunks with *different* retrieval ranks come out in the same order
     d2 = [RetrievedDoc(c, c, "x", ACL.parse("public"), r, 0.0) for c, r in (("c1", 0), ("c0", 1), ("c2", 2))]
     assert [x.chunk_id for x in order_reuse_aware(d2, pop)] == ["c2", "c1", "c0"]
+
+
+def test_relevance_anchor_pins_best_doc_last():
+    from aclkv.ordering import apply_ordering, apply_relevance_anchor
+    d = docs(["public", "public", "group:g", "user:a", "public"])
+    out = apply_relevance_anchor(d, anchor_k=2)
+    # the two best-ranked docs (c0, c1) move to the end, best (c0) immediately before the question
+    assert [x.chunk_id for x in out] == ["c2", "c3", "c4", "c1", "c0"]
+    # the rest keep their relative order
+    assert [x.chunk_id for x in apply_relevance_anchor(d, anchor_k=0)] == [x.chunk_id for x in d]
+    # never anchors the whole prompt (something must stay in front to be cacheable)
+    assert len(apply_relevance_anchor(d, anchor_k=99)) == len(d)
+    assert apply_relevance_anchor(d, anchor_k=99)[0].chunk_id == "c4"
+    # composes with every ordering
+    for name in ("retrieval", "acl_aware", "reuse_aware"):
+        assert apply_ordering(name, d, anchor_k=2)[-1].chunk_id == "c0"
+
+
+def test_anchor_takes_the_question_specific_docs_out_of_the_shared_front():
+    from aclkv.ordering import PopularityTracker, apply_ordering
+    pop = PopularityTracker(decay=1.0)
+    for _ in range(10):
+        pop.observe(["h1", "h2"])
+    shared = [RetrievedDoc("h1", "h", "x", ACL.parse("public"), 3, 0.0),
+              RetrievedDoc("h2", "h", "x", ACL.parse("public"), 4, 0.0)]
+    # two requests whose own top-ranked docs differ but which share the hot pair
+    a = [RetrievedDoc("a1", "a", "x", ACL.parse("public"), 0, 0.0), RetrievedDoc("a2", "a", "x", ACL.parse("public"), 1, 0.0)] + shared
+    b = [RetrievedDoc("b1", "b", "x", ACL.parse("public"), 0, 0.0), RetrievedDoc("b2", "b", "x", ACL.parse("public"), 1, 0.0)] + shared
+    oa = [x.chunk_id for x in apply_ordering("reuse_aware", a, pop, anchor_k=2)]
+    ob = [x.chunk_id for x in apply_ordering("reuse_aware", b, pop, anchor_k=2)]
+    assert oa[:2] == ob[:2] == ["h1", "h2"]        # shared prefix at the front
+    assert oa[-1] == "a1" and ob[-1] == "b1"       # each request's best doc next to its question

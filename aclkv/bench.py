@@ -139,7 +139,7 @@ async def amain(args) -> None:
     workload, corpus = load_workload_and_corpus(args.workload, args.corpus)
     settings = BuildSettings(tokenizer=args.tokenizer, chat_format=args.chat_format, block_size=args.block_size,
                              align_blocks=args.align, scope_mode=args.scope_mode, max_shift=args.max_shift,
-                             min_pop=args.min_pop)
+                             min_pop=args.min_pop, anchor_k=args.anchor_k)
     tok = load_tokenizer(settings.tokenizer)
     builder = make_builder(workload, settings, tok)
     client = VLLMClient(args.base_url, args.model)
@@ -179,7 +179,7 @@ def parse_args(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--workload", required=True)
     ap.add_argument("--corpus", default="data/prepared/corpus.jsonl")
-    ap.add_argument("--policies", nargs="+", default=["B0", "B1", "B2", "B3", "B4", "UB"])
+    ap.add_argument("--policies", nargs="+", default=["B0", "B1", "B2", "B3", "B4", "B5", "B6", "UB"])
     ap.add_argument("--base-url", default="http://localhost:8000")
     ap.add_argument("--model", default=None, help="served model name (default: first from /v1/models)")
     ap.add_argument("--tokenizer", default="Qwen/Qwen2.5-7B-Instruct")
@@ -191,6 +191,7 @@ def parse_args(argv=None):
     ap.add_argument("--no-align", dest="align", action="store_false")
     ap.add_argument("--scope-mode", default="hash", choices=["hash", "marker"])
     ap.add_argument("--max-shift", type=int, default=None)
+    ap.add_argument("--anchor-k", type=int, default=0, help="pin the top-k retrieved docs immediately before the question")
     ap.add_argument("--min-pop", type=float, default=1.0, help="reuse-aware: decayed popularity needed to count as hot")
     ap.add_argument("--kv-gib", type=float, default=None, help="label + fallback for block count")
     ap.add_argument("--warmup", type=int, default=8)

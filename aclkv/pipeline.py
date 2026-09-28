@@ -24,6 +24,7 @@ class BuildSettings:
     scope_mode: str = "hash"
     max_shift: int | None = None
     min_pop: float = 1.0
+    anchor_k: int = 0
     popularity_decay: float = 0.98
 
     def to_json(self) -> dict:
@@ -47,6 +48,7 @@ def build_prompts(workload: Workload, corpus: dict[str, Chunk], policy: Policy |
                   builder: ContextBuilder, settings: BuildSettings) -> list[BuiltPrompt]:
     pol = get_policy(policy) if isinstance(policy, str) else policy
     ordering = OrderingConfig(name=pol.ordering, max_shift=settings.max_shift, min_pop=settings.min_pop,
+                              anchor_k=settings.anchor_k,
                               popularity=PopularityTracker(settings.popularity_decay))
     out: list[BuiltPrompt] = []
     for r in workload.requests:
