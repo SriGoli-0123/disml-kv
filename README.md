@@ -157,12 +157,28 @@ Security / timing probe alone (needs a running server):
 python scripts/security_probe.py --workload data/workloads/w_share0.50_mix-default_u20_s0.json --n 20
 ```
 
-Ordering-quality ablation (RQ2): bound displacement and compare EM/F1 across orderings.
+Ordering-quality ablation (RQ2) — the main open question. Compare EM/F1 across orderings,
+then across anchor depth, then with bounded displacement:
 
 ```bash
+# a) does reordering cost answer quality at all? (B3 = plain retrieval order is the control)
+python -m aclkv.bench --workload data/workloads/w_share0.50_mix-default_u20_s0.json \
+  --policies B3 B4 B5 B6 --tag ordering --concurrency 16 --kv-gib 2
+```
+
+```bash
+# b) how many documents should be pinned next to the question?
+for k in 0 1 2 3; do
+  python -m aclkv.bench --workload data/workloads/w_share0.50_mix-default_u20_s0.json \
+    --policies B5 --anchor-k $k --tag anchor$k --concurrency 16 --kv-gib 2
+done
+```
+
+```bash
+# c) if quality still drops, buy it back with bounded displacement (0 = retrieval order)
 for s in 0 2 4; do
   python -m aclkv.bench --workload data/workloads/w_share0.50_mix-default_u20_s0.json \
-    --policies B3 B4 B5 --max-shift $s --tag shift$s --concurrency 16 --kv-gib 2
+    --policies B5 B6 --max-shift $s --tag shift$s --concurrency 16 --kv-gib 2
 done
 ```
 
