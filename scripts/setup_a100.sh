@@ -11,6 +11,9 @@ PYTHON="${PYTHON:-python3}"
 if [ ! -d "$VENV" ]; then
   "$PYTHON" -m venv "$VENV"
 fi
+if [ -d "/scratch/${USER:-}" ]; then
+  export HF_HOME="${HF_HOME:-/scratch/$USER/hf_cache}"
+fi
 # shellcheck disable=SC1091
 source "$VENV/bin/activate"
 pip install --upgrade pip wheel

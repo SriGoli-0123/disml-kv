@@ -17,6 +17,9 @@ BYTES=$(python -c "print(int(float('$KV_GIB')*1024**3))")
 
 # /reset_prefix_cache lives behind the dev router
 export VLLM_SERVER_DEV_MODE=1
+if [ -d "/scratch/${USER:-}" ]; then
+  export HF_HOME="${HF_HOME:-/scratch/$USER/hf_cache}"
+fi
 # make sure our plugin is not filtered out if VLLM_PLUGINS is set elsewhere
 if [ -n "${VLLM_PLUGINS:-}" ]; then export VLLM_PLUGINS="${VLLM_PLUGINS},aclkv_scoped_hash"; fi
 

@@ -119,9 +119,12 @@ def main():
     ap.add_argument("--results-dir", default="results")
     ap.add_argument("--out", default="results/summary.md")
     args = ap.parse_args()
+    sim_path = Path(args.sim_csv)
+    if not sim_path.exists() and Path("docs/sim/sim_matrix_summary.csv").exists():
+        sim_path = Path("docs/sim/sim_matrix_summary.csv")
     parts = ["# Results summary\n"]
-    if Path(args.sim_csv).exists():
-        parts.append(sim_tables(Path(args.sim_csv)))
+    if sim_path.exists():
+        parts.append(sim_tables(sim_path))
     if Path(args.bench_dir).exists():
         parts.append(bench_tables(Path(args.bench_dir)))
     parts.append(probe_tables(Path(args.results_dir)))

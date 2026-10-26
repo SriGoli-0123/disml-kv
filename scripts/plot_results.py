@@ -108,8 +108,11 @@ def main():
     args = ap.parse_args()
     out = Path(args.out_dir)
     out.mkdir(parents=True, exist_ok=True)
-    if Path(args.sim_csv).exists():
-        plot_sim(Path(args.sim_csv), out)
+    sim_path = Path(args.sim_csv)
+    if not sim_path.exists() and Path("docs/sim/sim_matrix_summary.csv").exists():
+        sim_path = Path("docs/sim/sim_matrix_summary.csv")
+    if sim_path.exists():
+        plot_sim(sim_path, out)
     if Path(args.bench_dir).exists():
         plot_bench(Path(args.bench_dir), out)
     print("plots in", out)
