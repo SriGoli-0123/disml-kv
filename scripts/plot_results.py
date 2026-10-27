@@ -14,9 +14,10 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
-POLICIES = ["B0", "B1", "B2", "B3", "B4", "B5", "UB"]
+POLICIES = ["B0", "B1", "B2", "B3", "B4", "B5", "B6", "UB"]
 STYLE = {"B0": ("#999999", "x"), "B1": ("#d62728", "s"), "B2": ("#ff7f0e", "^"), "B3": ("#1f77b4", "o"),
-         "B4": ("#2ca02c", "D"), "B5": ("#9467bd", "*"), "UB": ("#000000", "+"), "UB-order": ("#444444", "1"), "UB-reuse": ("#777777", "2")}
+         "B4": ("#2ca02c", "D"), "B5": ("#9467bd", "*"), "B6": ("#8c564b", "v"),
+         "UB": ("#000000", "+"), "UB-order": ("#444444", "1"), "UB-reuse": ("#777777", "2")}
 
 
 def plot_sim(csv_path: Path, out_dir: Path):
