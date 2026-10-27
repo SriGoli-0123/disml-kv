@@ -78,7 +78,9 @@ else
   POLICIES="${POLICIES:-$(jq_get "' '.join(c['policies'])")}"
 fi
 PORT="${PORT:-8000}"
-BASE_URL="http://localhost:$PORT"
+BASE_URL="http://127.0.0.1:$PORT"
+export no_proxy="localhost,127.0.0.1,${no_proxy:-}"
+export NO_PROXY="localhost,127.0.0.1,${NO_PROXY:-}"
 OUT_DIR="${OUT_DIR:-results/bench}"
 LOG_DIR="${LOG_DIR:-logs}"; mkdir -p "$LOG_DIR" "$OUT_DIR"
 EXTRA_BENCH_ARGS="${EXTRA_BENCH_ARGS:-}"

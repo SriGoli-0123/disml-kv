@@ -6,9 +6,25 @@ TIMEOUT="${2:-1800}"
 PID="${3:-}"
 LOG_FILE="${4:-}"
 
+check_health() {
+  # 1. curl IPv4 with proxy bypassed
+  curl -4 -sf --noproxy "*" "$URL/health" >/dev/null 2>&1 && return 0
+  curl -4 -sf --noproxy "*" "${URL/localhost/127.0.0.1}/health" >/dev/null 2>&1 && return 0
+  # 2. Python urllib fallback
+  python3 -c "import urllib.request; urllib.request.urlopen('$URL/health', timeout=1)" >/dev/null 2>&1 && return 0
+  python3 -c "import urllib.request; urllib.request.urlopen('${URL/localhost/127.0.0.1}/health', timeout=1)" >/dev/null 2>&1 && return 0
+  # 3. Server log readiness detection
+  if [ -n "$LOG_FILE" ] && [ -f "$LOG_FILE" ]; then
+    if grep -q "Application startup complete" "$LOG_FILE" 2>/dev/null; then
+      return 0
+    fi
+  fi
+  return 1
+}
+
 echo "Waiting for vLLM server at $URL to become ready..."
 for ((i=0; i<TIMEOUT; i+=5)); do
-  if curl -sf "$URL/health" >/dev/null 2>&1; then
+  if check_health; then
     echo "vLLM server is healthy and ready at $URL (took ${i}s)."
     exit 0
   fi
