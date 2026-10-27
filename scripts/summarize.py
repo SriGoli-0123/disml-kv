@@ -10,7 +10,7 @@ import json
 from collections import defaultdict
 from pathlib import Path
 
-POLICY_ORDER = ["B0", "B1", "B2", "B3", "B4", "B5", "UB", "UB-order", "UB-reuse"]
+POLICY_ORDER = ["B0", "B1", "B2", "B3", "B4", "B5", "B6", "UB", "UB-order", "UB-reuse"]
 
 
 def pkey(p):
