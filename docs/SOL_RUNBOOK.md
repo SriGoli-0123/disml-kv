@@ -44,6 +44,7 @@ module load cuda-12.1.1-gcc-12.1.0
 # 4. Set environment variables
 export HF_HOME=/scratch/$USER/hf_cache
 export VENV=/scratch/$USER/aclkv-venv
+export LD_LIBRARY_PATH="/packages/apps/mamba/2.9.0/lib:${LD_LIBRARY_PATH:-}"
 mkdir -p "$HF_HOME"
 
 # 5. Run the one-time A100 setup script

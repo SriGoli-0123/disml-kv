@@ -20,6 +20,16 @@ export VLLM_SERVER_DEV_MODE=1
 if [ -d "/scratch/${USER:-}" ]; then
   export HF_HOME="${HF_HOME:-/scratch/$USER/hf_cache}"
 fi
+
+# Ensure modern libstdc++ from mamba is prioritized over older system /lib64
+PY_BASE_LIB="$(python -c "import sys; print(sys.base_prefix)" 2>/dev/null || true)/lib"
+if [ -d "$PY_BASE_LIB" ]; then
+  export LD_LIBRARY_PATH="$PY_BASE_LIB:${LD_LIBRARY_PATH:-}"
+fi
+if [ -d "/packages/apps/mamba/2.9.0/lib" ]; then
+  export LD_LIBRARY_PATH="/packages/apps/mamba/2.9.0/lib:${LD_LIBRARY_PATH:-}"
+fi
+
 # make sure our plugin is not filtered out if VLLM_PLUGINS is set elsewhere
 if [ -n "${VLLM_PLUGINS:-}" ]; then export VLLM_PLUGINS="${VLLM_PLUGINS},aclkv_scoped_hash"; fi
 

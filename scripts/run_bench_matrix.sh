@@ -11,6 +11,14 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 CFG=configs/matrix.json
+# Ensure modern libstdc++ from mamba is prioritized over older system /lib64
+PY_BASE_LIB="$(python -c "import sys; print(sys.base_prefix)" 2>/dev/null || true)/lib"
+if [ -d "$PY_BASE_LIB" ]; then
+  export LD_LIBRARY_PATH="$PY_BASE_LIB:${LD_LIBRARY_PATH:-}"
+fi
+if [ -d "/packages/apps/mamba/2.9.0/lib" ]; then
+  export LD_LIBRARY_PATH="/packages/apps/mamba/2.9.0/lib:${LD_LIBRARY_PATH:-}"
+fi
 jq_get() { python -c "import json,sys; c=json.load(open('$CFG')); print($1)"; }
 
 MODEL="${MODEL:-$(jq_get "c['model']")}"
