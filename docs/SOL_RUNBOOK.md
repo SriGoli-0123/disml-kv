@@ -130,7 +130,13 @@ python scripts/security_probe.py \
 
 ## Phase 5: Run Benchmark Matrix (Performance & QA Quality)
 
-You can run either the automated runner script or targeted individual benchmarks.
+> **Checkpointing & Resume Support**: Both `scripts/run_bench_matrix.sh` and `scripts/run_sim_matrix.py` automatically detect completed runs and resume from where they left off. If your terminal session closes, SLURM time expires, or you press `Ctrl+C`, simply re-run the same command later — it will skip already completed workloads and resume cleanly without restarting. (To force a fresh re-run from scratch, pass `FORCE=1`).
+
+### Step 5.1: Run Simulator Matrix (CPU, ~1 min)
+Before running the live GPU matrix, generate the deterministic baseline cache simulations:
+```bash
+python scripts/run_sim_matrix.py
+```
 
 ### Option A: Fast Run (~25 min)
 Covers 2 GiB cache budget, share rates 0.0 and 0.5, concurrency 16, policies B0, B1, B3, B5, B6, UB, plus the security probe:
