@@ -91,7 +91,7 @@ start_server() {  # $1 = kv gib, $2.. = extra vllm args
   echo "--- Starting vLLM server in background: KV=${kv}GiB (log: $log_file)"
   bash scripts/start_vllm.sh "$kv" "$@" > "$log_file" 2>&1 &
   SERVER_PID=$!
-  bash scripts/wait_for_server.sh "$BASE_URL" 1800
+  bash scripts/wait_for_server.sh "$BASE_URL" 1800 "$SERVER_PID" "$log_file"
 }
 stop_server() {
   if [ -n "${SERVER_PID:-}" ]; then
