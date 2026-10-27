@@ -53,6 +53,7 @@ def main():
     ap.add_argument("--probe-mode", default="no_salt", choices=["no_salt", "forged"])
     ap.add_argument("--out-dir", default="results/sim")
     ap.add_argument("--tag", default="matrix")
+    ap.add_argument("--save-records", action="store_true", help="write per-request JSON records in addition to summary.csv")
     ap.add_argument("--force", action="store_true", default=False, help="re-run and overwrite existing simulations")
     args = ap.parse_args()
 
