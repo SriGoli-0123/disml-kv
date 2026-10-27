@@ -53,9 +53,8 @@ if [ -n "${CUDA_HOME:-}" ]; then
   export LD_LIBRARY_PATH="$CUDA_HOME/lib64:${LD_LIBRARY_PATH:-}"
 fi
 
-if ! command -v nvcc >/dev/null 2>&1; then
-  export VLLM_USE_FLASHINFER_SAMPLER=0
-fi
+# Disable FlashInfer JIT sampler by default to prevent nvcc compilation errors (e.g. unknown option --compress-mode on CUDA <=12.3)
+export VLLM_USE_FLASHINFER_SAMPLER="${VLLM_USE_FLASHINFER_SAMPLER:-0}"
 
 jq_get() { python -c "import json,sys; c=json.load(open('$CFG')); print($1)"; }
 

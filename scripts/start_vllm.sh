@@ -63,10 +63,8 @@ if [ -n "${CUDA_HOME:-}" ]; then
   export LD_LIBRARY_PATH="$CUDA_HOME/lib64:${LD_LIBRARY_PATH:-}"
 fi
 
-# If nvcc is still unavailable, fallback to PyTorch native topk/topp sampling
-if ! command -v nvcc >/dev/null 2>&1; then
-  export VLLM_USE_FLASHINFER_SAMPLER=0
-fi
+# Disable FlashInfer JIT sampler by default to prevent nvcc compilation errors (e.g. unknown option --compress-mode on CUDA <=12.3)
+export VLLM_USE_FLASHINFER_SAMPLER="${VLLM_USE_FLASHINFER_SAMPLER:-0}"
 
 # make sure our plugin is not filtered out if VLLM_PLUGINS is set elsewhere
 if [ -n "${VLLM_PLUGINS:-}" ]; then export VLLM_PLUGINS="${VLLM_PLUGINS},aclkv_scoped_hash"; fi
