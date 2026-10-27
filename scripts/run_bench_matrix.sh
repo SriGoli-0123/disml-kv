@@ -81,6 +81,7 @@ PORT="${PORT:-8000}"
 BASE_URL="http://127.0.0.1:$PORT"
 export no_proxy="localhost,127.0.0.1,${no_proxy:-}"
 export NO_PROXY="localhost,127.0.0.1,${NO_PROXY:-}"
+export GPU_UTIL="${GPU_UTIL:-0.75}"
 OUT_DIR="${OUT_DIR:-results/bench}"
 LOG_DIR="${LOG_DIR:-logs}"; mkdir -p "$LOG_DIR" "$OUT_DIR"
 EXTRA_BENCH_ARGS="${EXTRA_BENCH_ARGS:-}"
@@ -92,6 +93,8 @@ start_server() {  # $1 = kv gib, $2.. = extra vllm args
   local log_file="$LOG_DIR/vllm_kv${kv}_$(date +%s).log"
   # Ensure no orphaned vLLM workers or stale IPC sockets occupy GPU VRAM
   pkill -f "vllm" 2>/dev/null || true
+  pkill -f "multiprocessing" 2>/dev/null || true
+  fuser -k -9 /dev/nvidia* 2>/dev/null || true
   rm -f /tmp/vllm_dist_* /tmp/vllm_* 2>/dev/null || true
   sleep 2
   echo "--- Starting vLLM server in background: KV=${kv}GiB (log: $log_file)"
@@ -106,6 +109,8 @@ stop_server() {
     SERVER_PID=""
   fi
   pkill -f "vllm" 2>/dev/null || true
+  pkill -f "multiprocessing" 2>/dev/null || true
+  fuser -k -9 /dev/nvidia* 2>/dev/null || true
   rm -f /tmp/vllm_dist_* /tmp/vllm_* 2>/dev/null || true
   sleep 3
 }

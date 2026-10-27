@@ -12,7 +12,7 @@ MODEL="${MODEL:-Qwen/Qwen2.5-7B-Instruct}"
 PORT="${PORT:-8000}"
 MAX_MODEL_LEN="${MAX_MODEL_LEN:-6144}"
 MAX_NUM_SEQS="${MAX_NUM_SEQS:-32}"
-GPU_UTIL="${GPU_UTIL:-0.90}"
+GPU_UTIL="${GPU_UTIL:-0.75}"
 BYTES=$(python -c "print(int(float('$KV_GIB')*1024**3))")
 
 # /reset_prefix_cache lives behind the dev router
