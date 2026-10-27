@@ -146,6 +146,25 @@ async def amain(args) -> None:
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    needed_policies = []
+    for pol in args.policies:
+        name = f"{args.tag + '_' if args.tag else ''}{Path(args.workload).stem}_c{args.concurrency}_kv{args.kv_gib}_{pol}.json"
+        target_file = out_dir / name
+        if not getattr(args, "force", False) and target_file.exists():
+            try:
+                with open(target_file) as f:
+                    data = json.load(f)
+                if "summary" in data and data["summary"].get("req_per_s") is not None:
+                    print(f"    [checkpoint] skipping already completed policy {pol} ({name})", flush=True)
+                    continue
+            except Exception:
+                pass
+        needed_policies.append(pol)
+
+    if not needed_policies:
+        print(f"    [checkpoint] all {len(args.policies)} policies already completed for {Path(args.workload).stem} c={args.concurrency} kv={args.kv_gib}. Skipping run.", flush=True)
+        return
+
     limits = httpx.Limits(max_connections=args.concurrency + 8, max_keepalive_connections=args.concurrency + 8)
     async with httpx.AsyncClient(limits=limits) as session:
         await client.wait_ready(session)
@@ -166,13 +185,16 @@ async def amain(args) -> None:
             wp = build_prompts(workload, corpus, "B0", builder, settings)[: args.warmup]
             await run_closed_loop(client, session, wp, min(args.concurrency, len(wp)), args.max_tokens, progress=False)
 
-        for pol in args.policies:
+        for pol in needed_policies:
             res = await bench_policy(args, client, session, workload, corpus, builder, settings, pol, num_blocks)
             res["server"] = {"model": model, "num_gpu_blocks": num_blocks, "cache_config": cc}
             name = f"{args.tag + '_' if args.tag else ''}{Path(args.workload).stem}_c{args.concurrency}_kv{args.kv_gib}_{pol}.json"
-            with open(out_dir / name, "w") as f:
+            target_path = out_dir / name
+            tmp_path = out_dir / f".tmp_{name}"
+            with open(tmp_path, "w") as f:
                 json.dump(res, f)
-            print(f"    -> {out_dir / name}", flush=True)
+            tmp_path.replace(target_path)
+            print(f"    -> {target_path}", flush=True)
 
 
 def parse_args(argv=None):
@@ -199,6 +221,7 @@ def parse_args(argv=None):
     ap.add_argument("--no-reset", dest="reset", action="store_false")
     ap.add_argument("--out-dir", default="results/bench")
     ap.add_argument("--tag", default="")
+    ap.add_argument("--force", action="store_true", default=False, help="force re-running benchmarks even if results already exist")
     return ap.parse_args(argv)
 
 

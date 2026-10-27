@@ -53,7 +53,7 @@ def main():
     ap.add_argument("--probe-mode", default="no_salt", choices=["no_salt", "forged"])
     ap.add_argument("--out-dir", default="results/sim")
     ap.add_argument("--tag", default="matrix")
-    ap.add_argument("--save-records", action="store_true")
+    ap.add_argument("--force", action="store_true", default=False, help="re-run and overwrite existing simulations")
     args = ap.parse_args()
 
     cfg = json.load(open(args.config))
@@ -77,26 +77,65 @@ def main():
     tok = load_tokenizer(tok_name)
     out_dir = Path(args.out_dir) / args.tag
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    csv_file = out_dir / "summary.csv"
+    existing_rows = {}
+    if not args.force and csv_file.exists():
+        try:
+            with open(csv_file, "r") as f:
+                reader = csv.DictReader(f)
+                for r in reader:
+                    k = (r["workload"], r["policy"], float(r["kv_gib"]), int(r["concurrency"]))
+                    existing_rows[k] = r
+            if existing_rows:
+                print(f"[checkpoint] loaded {len(existing_rows)} existing simulation results from {csv_file}")
+        except Exception:
+            existing_rows = {}
+
     rows = []
+
+    def flush_summary():
+        tmp_csv = out_dir / ".tmp_summary.csv"
+        with open(tmp_csv, "w", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=COLUMNS)
+            w.writeheader()
+            w.writerows(rows)
+        tmp_csv.replace(csv_file)
+
     for wpath in workloads:
         workload, corpus = load_workload_and_corpus(wpath, args.corpus)
         builder = make_builder(workload, settings, tok)
         wname = Path(wpath).stem
         for pol_name in policies:
             pol = get_policy(pol_name)
+            # Check if all kv/concurrency combinations for this policy are already completed
+            combos_needed = []
+            for kv in kv_gibs:
+                for c in concs:
+                    if args.force or (wname, pol.name, float(kv), int(c)) not in existing_rows:
+                        combos_needed.append((kv, c))
+                    else:
+                        rows.append(existing_rows[(wname, pol.name, float(kv), int(c))])
+            if not combos_needed:
+                print(f"  [checkpoint] skipping {wname:34s} {pol.name:8s} (all kv/c combinations already in summary.csv)", flush=True)
+                continue
+
             t0 = time.time()
             prompts = build_prompts(workload, corpus, pol, builder, settings)
             n_tok = sum(p.num_tokens for p in prompts)
             for kv in kv_gibs:
                 num_blocks = geom.num_blocks(int(kv * GIB), cfg["block_size"])
                 for c in concs:
+                    sim_key = (wname, pol.name, float(kv), int(c))
+                    if not args.force and sim_key in existing_rows:
+                        continue
                     # efficiency run: honest replay only (probes would perturb LRU state)
                     recs, s = simulate(prompts, num_blocks, workload.directory, cfg["block_size"], max_concurrency=c,
                                        output_tokens=out_tokens, probe_rate=0.0, seed=workload.config.seed)
                     # security run: same replay interleaved with adversarial probes
                     _, sec = simulate(prompts, num_blocks, workload.directory, cfg["block_size"], max_concurrency=c,
-                                      output_tokens=out_tokens, probe_rate=args.probe_rate, probe_mode=args.probe_mode,
-                                      seed=workload.config.seed)
+                                       output_tokens=out_tokens, probe_rate=args.probe_rate, probe_mode=args.probe_mode,
+                                       seed=workload.config.seed)
                     s.probe_requests, s.probe_unauthorized_hits, s.probe_cached_tokens = (
                         sec.probe_requests, sec.probe_unauthorized_hits, sec.probe_cached_tokens)
                     s.unauthorized_hits = max(s.unauthorized_hits, sec.unauthorized_hits)
@@ -112,6 +151,7 @@ def main():
                         "mean_prompt_tokens": round(n_tok / max(1, len(prompts)), 1), "wall_s": round(time.time() - t0, 2),
                     }
                     rows.append(row)
+                    flush_summary()
                     print(f"{wname:34s} {pol.name:8s} kv={kv:<4} c={c:<3} cached={s.cached_pct:5.1f}%  "
                           f"recomp={s.recomputed_tokens:8d}  evict={s.evictions:6d}  stalls={s.stalls:4d}  "
                           f"unauth={s.unauthorized_hits}  probe_leaks={s.probe_unauthorized_hits}", flush=True)
@@ -120,11 +160,8 @@ def main():
                             json.dump({"row": row, "summary": s.to_json(),
                                        "records": [r.__dict__ for r in recs],
                                        "prompts": [p.to_json() for p in prompts] if pol_name == policies[0] else None}, f)
-    with open(out_dir / "summary.csv", "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=COLUMNS)
-        w.writeheader()
-        w.writerows(rows)
-    print(f"\nwrote {out_dir / 'summary.csv'} ({len(rows)} rows)")
+    flush_summary()
+    print(f"\nwrote {csv_file} ({len(rows)} rows)")
 
 
 if __name__ == "__main__":

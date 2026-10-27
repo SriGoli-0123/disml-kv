@@ -101,7 +101,64 @@ stop_server() {
 }
 trap stop_server EXIT
 
+FORCE="${FORCE:-0}"
+if [ "$FORCE" = "1" ]; then
+  EXTRA_BENCH_ARGS="${EXTRA_BENCH_ARGS} --force"
+fi
+
+bench_file_done() {
+  local tag="$1" wl="$2" c="$3" kv="$4" pol="$5"
+  local wl_stem; wl_stem="$(basename "$wl" .json)"
+  local prefix=""
+  [ -n "$tag" ] && prefix="${tag}_"
+  local target="$OUT_DIR/${prefix}${wl_stem}_c${c}_kv${kv}_${pol}.json"
+  if [ "$FORCE" != "1" ] && [ -s "$target" ]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+workload_concurrency_done() {
+  local wl="$1" c="$2" kv="$3"
+  for pol in $POLICIES; do
+    if ! bench_file_done "" "$wl" "$c" "$kv" "$pol"; then
+      return 1
+    fi
+  done
+  return 0
+}
+
+kv_budget_done() {
+  local kv="$1"
+  for share in $SHARES; do
+    local wl; wl=$(printf "data/workloads/w_share%.2f_mix-%s_u%s_s%s.json" "$share" "$MIX" "$NUSERS" "$SEED")
+    for c in $CONCS; do
+      if ! workload_concurrency_done "$wl" "$c" "$kv"; then
+        return 1
+      fi
+      if [ "${TRUE_B0:-0}" = "1" ]; then
+        if ! bench_file_done "trueB0" "$wl" "$c" "$kv" "B0"; then
+          return 1
+        fi
+      fi
+    done
+  done
+  if [ "${SECURITY_PROBE:-1}" = "1" ]; then
+    local probe_out="results/security_probe_kv${kv}.json"
+    if [ "$FORCE" != "1" ] && [ ! -s "$probe_out" ]; then
+      return 1
+    fi
+  fi
+  return 0
+}
+
 for kv in $KV_GIBS; do
+  if [ "$FORCE" != "1" ] && kv_budget_done "$kv"; then
+    echo "=== [checkpoint] All benchmarks and probes for kv=${kv}GiB are already completed. Skipping server start."
+    continue
+  fi
+
   start_server "$kv"
   if [ "${SKIP_SMOKE:-0}" != "1" ]; then   # SKIP_SMOKE=1 when benchmarking --scope-mode marker on a stock vLLM
     python scripts/smoke_test_plugin.py --base-url "$BASE_URL" --tokenizer "$TOKENIZER"
@@ -110,6 +167,10 @@ for kv in $KV_GIBS; do
     wl=$(printf "data/workloads/w_share%.2f_mix-%s_u%s_s%s.json" "$share" "$MIX" "$NUSERS" "$SEED")
     [ -f "$wl" ] || { echo "missing workload $wl (run scripts/gen_workloads.py)"; exit 1; }
     for c in $CONCS; do
+      if [ "$FORCE" != "1" ] && workload_concurrency_done "$wl" "$c" "$kv"; then
+        echo "=== [checkpoint] kv=${kv}GiB share=$share concurrency=$c all policies completed. Skipping."
+        continue
+      fi
       echo "=== kv=${kv}GiB share=$share concurrency=$c"
       # shellcheck disable=SC2086
       python -m aclkv.bench --workload "$wl" --policies $POLICIES --base-url "$BASE_URL" \
@@ -118,23 +179,47 @@ for kv in $KV_GIBS; do
     done
   done
   if [ "${SECURITY_PROBE:-1}" = "1" ]; then
-    wl=$(printf "data/workloads/w_share0.50_mix-%s_u%s_s%s.json" "$MIX" "$NUSERS" "$SEED")
-    python scripts/security_probe.py --workload "$wl" --base-url "$BASE_URL" --tokenizer "$TOKENIZER" \
-      --chat-format "$CHAT_FORMAT" --out "results/security_probe_kv${kv}.json" || echo "security probe reported a problem"
+    probe_out="results/security_probe_kv${kv}.json"
+    if [ "$FORCE" != "1" ] && [ -s "$probe_out" ]; then
+      echo "=== [checkpoint] security probe for kv=${kv}GiB already exists ($probe_out). Skipping."
+    else
+      wl=$(printf "data/workloads/w_share0.50_mix-%s_u%s_s%s.json" "$MIX" "$NUSERS" "$SEED")
+      python scripts/security_probe.py --workload "$wl" --base-url "$BASE_URL" --tokenizer "$TOKENIZER" \
+        --chat-format "$CHAT_FORMAT" --out "$probe_out" || echo "security probe reported a problem"
+    fi
   fi
   stop_server
 
   if [ "${TRUE_B0:-0}" = "1" ]; then
-    start_server "$kv" --no-enable-prefix-caching
+    true_b0_needed=0
     for share in $SHARES; do
       wl=$(printf "data/workloads/w_share%.2f_mix-%s_u%s_s%s.json" "$share" "$MIX" "$NUSERS" "$SEED")
       for c in $CONCS; do
-        python -m aclkv.bench --workload "$wl" --policies B0 --tag trueB0 --base-url "$BASE_URL" \
-          --tokenizer "$TOKENIZER" --chat-format "$CHAT_FORMAT" --concurrency "$c" --max-tokens "$MAX_TOKENS" \
-          --kv-gib "$kv" --out-dir "$OUT_DIR" --no-reset $EXTRA_BENCH_ARGS
+        if ! bench_file_done "trueB0" "$wl" "$c" "$kv" "B0"; then
+          true_b0_needed=1
+          break 2
+        fi
       done
     done
-    stop_server
+
+    if [ "$true_b0_needed" = "1" ] || [ "$FORCE" = "1" ]; then
+      start_server "$kv" --no-enable-prefix-caching
+      for share in $SHARES; do
+        wl=$(printf "data/workloads/w_share%.2f_mix-%s_u%s_s%s.json" "$share" "$MIX" "$NUSERS" "$SEED")
+        for c in $CONCS; do
+          if [ "$FORCE" != "1" ] && bench_file_done "trueB0" "$wl" "$c" "$kv" "B0"; then
+            echo "=== [checkpoint] trueB0 kv=${kv}GiB share=$share c=$c already completed. Skipping."
+            continue
+          fi
+          python -m aclkv.bench --workload "$wl" --policies B0 --tag trueB0 --base-url "$BASE_URL" \
+            --tokenizer "$TOKENIZER" --chat-format "$CHAT_FORMAT" --concurrency "$c" --max-tokens "$MAX_TOKENS" \
+            --kv-gib "$kv" --out-dir "$OUT_DIR" --no-reset $EXTRA_BENCH_ARGS
+        done
+      done
+      stop_server
+    else
+      echo "=== [checkpoint] All trueB0 benchmarks for kv=${kv}GiB already completed. Skipping server start."
+    fi
   fi
 done
 python scripts/summarize.py --bench-dir "$OUT_DIR" --sim-csv results/sim/matrix/summary.csv || true
