@@ -30,6 +30,44 @@ if [ -d "/packages/apps/mamba/2.9.0/lib" ]; then
   export LD_LIBRARY_PATH="/packages/apps/mamba/2.9.0/lib:${LD_LIBRARY_PATH:-}"
 fi
 
+# Ensure CUDA toolkit (nvcc) and CUDA_HOME are available for JIT compilation (FlashInfer, deep_gemm)
+if ! command -v nvcc >/dev/null 2>&1; then
+  for mod_init in /etc/profile.d/modules.sh /usr/share/lmod/lmod/init/bash /usr/share/Modules/init/bash; do
+    if [ -f "$mod_init" ]; then
+      source "$mod_init" 2>/dev/null || true
+      break
+    fi
+  done
+  if command -v module >/dev/null 2>&1; then
+    module load cuda-12.1.1-gcc-12.1.0 2>/dev/null || module load cuda-12.1 2>/dev/null || module load cuda 2>/dev/null || true
+  fi
+fi
+
+if [ -z "${CUDA_HOME:-}" ]; then
+  if command -v nvcc >/dev/null 2>&1; then
+    export CUDA_HOME="$(dirname "$(dirname "$(command -v nvcc)")")"
+  else
+    for p in /packages/apps/cuda/12.1.1 /packages/apps/cuda/12.4 /packages/apps/cuda/12.8 /packages/apps/cuda/*; do
+      if [ -x "$p/bin/nvcc" ]; then
+        export CUDA_HOME="$p"
+        export PATH="$p/bin:$PATH"
+        export LD_LIBRARY_PATH="$p/lib64:${LD_LIBRARY_PATH:-}"
+        break
+      fi
+    done
+  fi
+fi
+
+if [ -n "${CUDA_HOME:-}" ]; then
+  export PATH="$CUDA_HOME/bin:$PATH"
+  export LD_LIBRARY_PATH="$CUDA_HOME/lib64:${LD_LIBRARY_PATH:-}"
+fi
+
+# If nvcc is still unavailable, fallback to PyTorch native topk/topp sampling
+if ! command -v nvcc >/dev/null 2>&1; then
+  export VLLM_USE_FLASHINFER_SAMPLER=0
+fi
+
 # make sure our plugin is not filtered out if VLLM_PLUGINS is set elsewhere
 if [ -n "${VLLM_PLUGINS:-}" ]; then export VLLM_PLUGINS="${VLLM_PLUGINS},aclkv_scoped_hash"; fi
 
