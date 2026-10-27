@@ -31,8 +31,8 @@ for ((i=0; i<TIMEOUT; i+=5)); do
   if [ -n "$PID" ] && ! kill -0 "$PID" 2>/dev/null; then
     echo "ERROR: vLLM server process (PID $PID) died unexpectedly!" >&2
     if [ -n "$LOG_FILE" ] && [ -f "$LOG_FILE" ]; then
-      echo "--- Last 30 lines of $LOG_FILE ---" >&2
-      tail -n 30 "$LOG_FILE" >&2
+      echo "--- Last 100 lines of $LOG_FILE ---" >&2
+      tail -n 100 "$LOG_FILE" >&2
       echo "-----------------------------------" >&2
     fi
     exit 1
@@ -44,6 +44,6 @@ for ((i=0; i<TIMEOUT; i+=5)); do
 done
 echo "server at $URL not ready after ${TIMEOUT}s" >&2
 if [ -n "$LOG_FILE" ] && [ -f "$LOG_FILE" ]; then
-  tail -n 30 "$LOG_FILE" >&2
+  tail -n 100 "$LOG_FILE" >&2
 fi
 exit 1
