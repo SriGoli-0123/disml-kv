@@ -87,7 +87,9 @@ echo "model=$MODEL kv_gibs=[$KV_GIBS] shares=[$SHARES] concs=[$CONCS] policies=[
 
 start_server() {  # $1 = kv gib, $2.. = extra vllm args
   local kv="$1"; shift
-  bash scripts/start_vllm.sh "$kv" "$@" > "$LOG_DIR/vllm_kv${kv}_$(date +%s).log" 2>&1 &
+  local log_file="$LOG_DIR/vllm_kv${kv}_$(date +%s).log"
+  echo "--- Starting vLLM server in background: KV=${kv}GiB (log: $log_file)"
+  bash scripts/start_vllm.sh "$kv" "$@" > "$log_file" 2>&1 &
   SERVER_PID=$!
   bash scripts/wait_for_server.sh "$BASE_URL" 1800
 }
