@@ -1,0 +1,2614 @@
+{
+ "policies": {
+  "UB": {
+   "summary": {
+    "victim_cold_ttft": {
+     "n": 20,
+     "mean": 0.13755945451557636,
+     "p50": 0.12876588746439666,
+     "p90": 0.1600009745452553,
+     "p95": 0.16890791762853047,
+     "p99": 0.234569449268747,
+     "max": 0.2509848321788013
+    },
+    "victim_warm_ttft": {
+     "n": 20,
+     "mean": 0.017756898386869578,
+     "p50": 0.01763760414905846,
+     "p90": 0.018678292632102966,
+     "p95": 0.018883516115602107,
+     "p99": 0.020151942416559904,
+     "max": 0.020469048991799355
+    },
+    "no_salt": {
+     "n": 20,
+     "attacker_hits": 20,
+     "cached_tokens_mean": 2167.2,
+     "ttft": {
+      "n": 20,
+      "mean": 0.0174838378559798,
+      "p50": 0.017501542577520013,
+      "p90": 0.018068108754232527,
+      "p95": 0.01829543607309461,
+      "p99": 0.019740164075046775,
+      "max": 0.02010134607553482
+     }
+    },
+    "stolen": {
+     "n": 20,
+     "attacker_hits": 20,
+     "cached_tokens_mean": 2167.2,
+     "ttft": {
+      "n": 20,
+      "mean": 0.017481581191532314,
+      "p50": 0.01737736852373928,
+      "p90": 0.018493550876155496,
+      "p95": 0.01858574642101303,
+      "p99": 0.019778646018821743,
+      "max": 0.020076870918273926
+     }
+    }
+   },
+   "rows": [
+    {
+     "victim": "r00210",
+     "victim_user": "u019",
+     "attacker": "u004",
+     "acl": "user:u019",
+     "num_tokens": 2057,
+     "victim_cold_ttft": 0.15001650201156735,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.018428867915645242,
+     "victim_warm_cached": 2048,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.017613363917917013,
+       "cached_tokens": 2048,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.017990523017942905,
+       "cached_tokens": 2048,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00228",
+     "victim_user": "u006",
+     "attacker": "u004",
+     "acl": "group:g01",
+     "num_tokens": 2002,
+     "victim_cold_ttft": 0.12197207496501505,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.017090750159695745,
+     "victim_warm_cached": 2000,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.01676566689275205,
+       "cached_tokens": 2000,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.01692724204622209,
+       "cached_tokens": 2000,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00021",
+     "victim_user": "u002",
+     "attacker": "u004",
+     "acl": "user:u002",
+     "num_tokens": 1978,
+     "victim_cold_ttft": 0.12139819492585957,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.017943834885954857,
+     "victim_warm_cached": 1968,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.017384713049978018,
+       "cached_tokens": 1968,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.01718389499001205,
+       "cached_tokens": 1968,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00143",
+     "victim_user": "u002",
+     "attacker": "u003",
+     "acl": "user:u002",
+     "num_tokens": 1702,
+     "victim_cold_ttft": 0.106074552051723,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.016982455039396882,
+     "victim_warm_cached": 1696,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.01667846296913922,
+       "cached_tokens": 1696,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.017096569994464517,
+       "cached_tokens": 1696,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00276",
+     "victim_user": "u019",
+     "attacker": "u010",
+     "acl": "user:u019",
+     "num_tokens": 2508,
+     "victim_cold_ttft": 0.1594912961591035,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.018800067016854882,
+     "victim_warm_cached": 2496,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.01793863601051271,
+       "cached_tokens": 2496,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.018507266184315085,
+       "cached_tokens": 2496,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00262",
+     "victim_user": "u001",
+     "attacker": "u019",
+     "acl": "group:g00&group:g02",
+     "num_tokens": 2020,
+     "victim_cold_ttft": 0.1221764290239662,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.01758825615979731,
+     "victim_warm_cached": 2016,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.01699156197719276,
+       "cached_tokens": 2016,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.016963840927928686,
+       "cached_tokens": 2016,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00220",
+     "victim_user": "u011",
+     "attacker": "u018",
+     "acl": "user:u011",
+     "num_tokens": 1809,
+     "victim_cold_ttft": 0.11014679702930152,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.01672954997047782,
+     "victim_warm_cached": 1808,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.016439312836155295,
+       "cached_tokens": 1808,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.01616238197311759,
+       "cached_tokens": 1808,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00166",
+     "victim_user": "u017",
+     "attacker": "u002",
+     "acl": "group:g00",
+     "num_tokens": 2004,
+     "victim_cold_ttft": 0.12225440610200167,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.017242694972082973,
+     "victim_warm_cached": 2000,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.016734408913180232,
+       "cached_tokens": 2000,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.017201296985149384,
+       "cached_tokens": 2000,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00258",
+     "victim_user": "u002",
+     "attacker": "u012",
+     "acl": "user:u002",
+     "num_tokens": 4023,
+     "victim_cold_ttft": 0.2509848321788013,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.020469048991799355,
+     "victim_warm_cached": 4016,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.02010134607553482,
+       "cached_tokens": 4016,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.020076870918273926,
+       "cached_tokens": 4016,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00194",
+     "victim_user": "u019",
+     "attacker": "u013",
+     "acl": "user:u019",
+     "num_tokens": 2572,
+     "victim_cold_ttft": 0.16458808002062142,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.01866476214490831,
+     "victim_warm_cached": 2560,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.018200388178229332,
+       "cached_tokens": 2560,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.018492026953026652,
+       "cached_tokens": 2560,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00316",
+     "victim_user": "u003",
+     "attacker": "u009",
+     "acl": "group:g03",
+     "num_tokens": 2345,
+     "victim_cold_ttft": 0.1512584099546075,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.01768695213831961,
+     "victim_warm_cached": 2336,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.018053411040455103,
+       "cached_tokens": 2336,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.017624703934416175,
+       "cached_tokens": 2336,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00120",
+     "victim_user": "u006",
+     "attacker": "u007",
+     "acl": "user:u006",
+     "num_tokens": 1381,
+     "victim_cold_ttft": 0.08526965999044478,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.016607739962637424,
+     "victim_warm_cached": 1376,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.01644474407657981,
+       "cached_tokens": 1376,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.01597501989454031,
+       "cached_tokens": 1376,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00273",
+     "victim_user": "u012",
+     "attacker": "u013",
+     "acl": "group:g00",
+     "num_tokens": 2338,
+     "victim_cold_ttft": 0.15122110000811517,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.01785206305794418,
+     "victim_warm_cached": 2336,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.017472136998549104,
+       "cached_tokens": 2336,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.01747520314529538,
+       "cached_tokens": 2336,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00076",
+     "victim_user": "u018",
+     "attacker": "u016",
+     "acl": "group:g00&group:g03",
+     "num_tokens": 2060,
+     "victim_cold_ttft": 0.13457940588705242,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.01772476313635707,
+     "victim_warm_cached": 2048,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.0176603221334517,
+       "cached_tokens": 2048,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.017221875954419374,
+       "cached_tokens": 2048,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00155",
+     "victim_user": "u017",
+     "attacker": "u014",
+     "acl": "user:u017",
+     "num_tokens": 2157,
+     "victim_cold_ttft": 0.13747747987508774,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.017517341999337077,
+     "victim_warm_cached": 2144,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.017530948156490922,
+       "cached_tokens": 2144,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.01743817306123674,
+       "cached_tokens": 2144,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00050",
+     "victim_user": "u011",
+     "attacker": "u017",
+     "acl": "user:u011",
+     "num_tokens": 1991,
+     "victim_cold_ttft": 0.12245617597363889,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.017429817002266645,
+     "victim_warm_cached": 1984,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.017142536817118526,
+       "cached_tokens": 1984,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.016946278046816587,
+       "cached_tokens": 1984,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00336",
+     "victim_user": "u017",
+     "attacker": "u005",
+     "acl": "group:g00",
+     "num_tokens": 2028,
+     "victim_cold_ttft": 0.1229523690417409,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.017429678002372384,
+     "victim_warm_cached": 2016,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.017095979070290923,
+       "cached_tokens": 2016,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.017626377986744046,
+       "cached_tokens": 2016,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00138",
+     "victim_user": "u009",
+     "attacker": "u001",
+     "acl": "user:u009",
+     "num_tokens": 1959,
+     "victim_cold_ttft": 0.12204898917116225,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.017145743127912283,
+     "victim_warm_cached": 1952,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.017664710059762,
+       "cached_tokens": 1952,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.017316563986241817,
+       "cached_tokens": 1952,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00288",
+     "victim_user": "u014",
+     "attacker": "u019",
+     "acl": "group:g01&group:g02",
+     "num_tokens": 2444,
+     "victim_cold_ttft": 0.15761424298398197,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.018039976013824344,
+     "victim_warm_cached": 2432,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.017946138978004456,
+       "cached_tokens": 2432,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.01773404097184539,
+       "cached_tokens": 2432,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00388",
+     "victim_user": "u017",
+     "attacker": "u000",
+     "acl": "group:g00&group:g04",
+     "num_tokens": 2125,
+     "victim_cold_ttft": 0.13720809295773506,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.0177636060398072,
+     "victim_warm_cached": 2112,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.01781796896830201,
+       "cached_tokens": 2112,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.01767147285863757,
+       "cached_tokens": 2112,
+       "ok": true,
+       "error": null
+      }
+     }
+    }
+   ]
+  },
+  "B3": {
+   "summary": {
+    "victim_cold_ttft": {
+     "n": 20,
+     "mean": 0.13116069486131893,
+     "p50": 0.13773955858778208,
+     "p90": 0.15199456471018494,
+     "p95": 0.15398565123323352,
+     "p99": 0.163056878936477,
+     "max": 0.16532468586228788
+    },
+    "victim_warm_ttft": {
+     "n": 20,
+     "mean": 0.01788347667315975,
+     "p50": 0.017854342004284263,
+     "p90": 0.01870983769185841,
+     "p95": 0.018961780716199427,
+     "p99": 0.019314020129386336,
+     "max": 0.019402079982683063
+    },
+    "no_salt": {
+     "n": 20,
+     "attacker_hits": 0,
+     "cached_tokens_mean": 0.0,
+     "ttft": {
+      "n": 20,
+      "mean": 0.13191988976905122,
+      "p50": 0.13792642997577786,
+      "p90": 0.15245025928597897,
+      "p95": 0.1541158643551171,
+      "p99": 0.16379665775224564,
+      "max": 0.1662168561015278
+     }
+    },
+    "forged": {
+     "n": 20,
+     "attacker_hits": 0,
+     "cached_tokens_mean": 0.0,
+     "ttft": {
+      "n": 20,
+      "mean": 0.13223283293191343,
+      "p50": 0.1388181281508878,
+      "p90": 0.15306345832068474,
+      "p95": 0.1551724168821238,
+      "p99": 0.16403822413412852,
+      "max": 0.16625467594712973
+     }
+    },
+    "stolen": {
+     "n": 20,
+     "attacker_hits": 20,
+     "cached_tokens_mean": 2075.2,
+     "ttft": {
+      "n": 20,
+      "mean": 0.017633727542124687,
+      "p50": 0.017809598008170724,
+      "p90": 0.018092701258137823,
+      "p95": 0.018215003004297615,
+      "p99": 0.018671063808724284,
+      "max": 0.01878507900983095
+     }
+    }
+   },
+   "rows": [
+    {
+     "victim": "r00049",
+     "victim_user": "u017",
+     "attacker": "u012",
+     "acl": "group:g04",
+     "num_tokens": 1897,
+     "victim_cold_ttft": 0.11407760484144092,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.018684418871998787,
+     "victim_warm_cached": 1888,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.11269526300020516,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.11312841903418303,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.017680088989436626,
+       "cached_tokens": 1888,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00396",
+     "victim_user": "u015",
+     "attacker": "u004",
+     "acl": "group:g03&group:g04",
+     "num_tokens": 2350,
+     "victim_cold_ttft": 0.1518396430183202,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.018555296817794442,
+     "victim_warm_cached": 2336,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.15233595808967948,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.15289393812417984,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.018082445953041315,
+       "cached_tokens": 2336,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00217",
+     "victim_user": "u004",
+     "attacker": "u002",
+     "acl": "user:u004",
+     "num_tokens": 2163,
+     "victim_cold_ttft": 0.13801558408886194,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.017838467145338655,
+     "victim_warm_cached": 2160,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.138682457851246,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.13926081685349345,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.017827036092057824,
+       "cached_tokens": 2160,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00391",
+     "victim_user": "u011",
+     "attacker": "u010",
+     "acl": "user:u011",
+     "num_tokens": 2612,
+     "victim_cold_ttft": 0.16532468586228788,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.018465306842699647,
+     "victim_warm_cached": 2608,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.1662168561015278,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.16625467594712973,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.01878507900983095,
+       "cached_tokens": 2608,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00366",
+     "victim_user": "u014",
+     "attacker": "u018",
+     "acl": "group:g01&group:g02",
+     "num_tokens": 1887,
+     "victim_cold_ttft": 0.11174754914827645,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.017435929970815778,
+     "victim_warm_cached": 1872,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.11270545306615531,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.11332421703264117,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.01743518700823188,
+       "cached_tokens": 1872,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00340",
+     "victim_user": "u000",
+     "attacker": "u011",
+     "acl": "group:g03",
+     "num_tokens": 2413,
+     "victim_cold_ttft": 0.1533888599369675,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.019402079982683063,
+     "victim_warm_cached": 2400,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.1534789700526744,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.15458914008922875,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.018184999004006386,
+       "cached_tokens": 2400,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00000",
+     "victim_user": "u003",
+     "attacker": "u005",
+     "acl": "group:g02&group:g03",
+     "num_tokens": 2286,
+     "victim_cold_ttft": 0.14352288912050426,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.01846040808595717,
+     "victim_warm_cached": 2272,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.1440960681065917,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.14448234485462308,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.018045556964352727,
+       "cached_tokens": 2272,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00333",
+     "victim_user": "u017",
+     "attacker": "u008",
+     "acl": "group:g04",
+     "num_tokens": 2076,
+     "victim_cold_ttft": 0.13524509803391993,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.01787021686322987,
+     "victim_warm_cached": 2064,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.13551688008010387,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.1363723101094365,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.01776154199615121,
+       "cached_tokens": 2064,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00266",
+     "victim_user": "u001",
+     "attacker": "u018",
+     "acl": "user:u001",
+     "num_tokens": 2149,
+     "victim_cold_ttft": 0.13801950099878013,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.018938607070595026,
+     "victim_warm_cached": 2144,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.14382587000727654,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.13969868095591664,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.01793704181909561,
+       "cached_tokens": 2144,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00181",
+     "victim_user": "u000",
+     "attacker": "u010",
+     "acl": "user:u000",
+     "num_tokens": 1377,
+     "victim_cold_ttft": 0.08543281815946102,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.015584224136546254,
+     "victim_warm_cached": 1376,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.08578070206567645,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.08623234299011528,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.015936306910589337,
+       "cached_tokens": 1376,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00133",
+     "victim_user": "u006",
+     "attacker": "u003",
+     "acl": "group:g01&group:g04",
+     "num_tokens": 2273,
+     "victim_cold_ttft": 0.14365398604422808,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.017139009898528457,
+     "victim_warm_cached": 2272,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.14423673297278583,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.1446377180982381,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.01666586985811591,
+       "cached_tokens": 2272,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00177",
+     "victim_user": "u001",
+     "attacker": "u014",
+     "acl": "group:g00&group:g02",
+     "num_tokens": 2123,
+     "victim_cold_ttft": 0.13762656110338867,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.017958383075892925,
+     "victim_warm_cached": 2112,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.13794815610162914,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.1388902091421187,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.017792159924283624,
+       "cached_tokens": 2112,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00386",
+     "victim_user": "u015",
+     "attacker": "u018",
+     "acl": "user:u015",
+     "num_tokens": 1940,
+     "victim_cold_ttft": 0.12169674597680569,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.0169810529332608,
+     "victim_warm_cached": 1936,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.12248531985096633,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.12289363006129861,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.017315292032435536,
+       "cached_tokens": 1936,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00034",
+     "victim_user": "u000",
+     "attacker": "u007",
+     "acl": "user:u000",
+     "num_tokens": 2117,
+     "victim_cold_ttft": 0.1378525560721755,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.017731655854731798,
+     "victim_warm_cached": 2112,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.1379047038499266,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.138912552036345,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.017846171045675874,
+       "cached_tokens": 2112,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00102",
+     "victim_user": "u007",
+     "attacker": "u019",
+     "acl": "group:g01&group:g02",
+     "num_tokens": 2218,
+     "victim_cold_ttft": 0.14176426897756755,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.0180695119779557,
+     "victim_warm_cached": 2208,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.14200935093685985,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.14239858300425112,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.018000171054154634,
+       "cached_tokens": 2208,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00306",
+     "victim_user": "u008",
+     "attacker": "u019",
+     "acl": "user:u008",
+     "num_tokens": 1779,
+     "victim_cold_ttft": 0.10769285797141492,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.01747717708349228,
+     "victim_warm_cached": 1776,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.10965146403759718,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.10964676598086953,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.016737664118409157,
+       "cached_tokens": 1776,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00122",
+     "victim_user": "u009",
+     "attacker": "u012",
+     "acl": "group:g01&group:g04",
+     "num_tokens": 2042,
+     "victim_cold_ttft": 0.12330042594112456,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.017698453040793538,
+     "victim_warm_cached": 2032,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.12449145712889731,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.12455402500927448,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.01792527106590569,
+       "cached_tokens": 2032,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00131",
+     "victim_user": "u010",
+     "attacker": "u009",
+     "acl": "group:g00",
+     "num_tokens": 2004,
+     "victim_cold_ttft": 0.1233779510948807,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.017471385886892676,
+     "victim_warm_cached": 2000,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.1243143929168582,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.1244106451049447,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.01739476202055812,
+       "cached_tokens": 2000,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00077",
+     "victim_user": "u004",
+     "attacker": "u002",
+     "acl": "group:g02",
+     "num_tokens": 2116,
+     "victim_cold_ttft": 0.13801137497648597,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.018188816029578447,
+     "victim_warm_cached": 2112,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.13819278706796467,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.13874604715965688,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.017991085071116686,
+       "cached_tokens": 2112,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00294",
+     "victim_user": "u011",
+     "attacker": "u013",
+     "acl": "user:u011",
+     "num_tokens": 1836,
+     "victim_cold_ttft": 0.11162293585948646,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.017719131894409657,
+     "victim_warm_cached": 1824,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.11182895209640265,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.11332959705032408,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.017330820905044675,
+       "cached_tokens": 1824,
+       "ok": true,
+       "error": null
+      }
+     }
+    }
+   ]
+  },
+  "B4": {
+   "summary": {
+    "victim_cold_ttft": {
+     "n": 20,
+     "mean": 0.13755092582432554,
+     "p50": 0.13849788100924343,
+     "p90": 0.15535193586256357,
+     "p95": 0.16956178883556283,
+     "p99": 0.23751371939200897,
+     "max": 0.25450170203112066
+    },
+    "victim_warm_ttft": {
+     "n": 20,
+     "mean": 0.01834636995336041,
+     "p50": 0.018113094149157405,
+     "p90": 0.019448864459991458,
+     "p95": 0.02020981297828257,
+     "p99": 0.020988797852769494,
+     "max": 0.021183544071391225
+    },
+    "no_salt": {
+     "n": 20,
+     "attacker_hits": 0,
+     "cached_tokens_mean": 0.0,
+     "ttft": {
+      "n": 20,
+      "mean": 0.138211546454113,
+      "p50": 0.13874352839775383,
+      "p90": 0.15589831033721568,
+      "p95": 0.1701636819983833,
+      "p99": 0.2376936171739361,
+      "max": 0.25457610096782446
+     }
+    },
+    "forged": {
+     "n": 20,
+     "attacker_hits": 0,
+     "cached_tokens_mean": 0.0,
+     "ttft": {
+      "n": 20,
+      "mean": 0.13864685625303536,
+      "p50": 0.13948371598962694,
+      "p90": 0.1561057909857482,
+      "p95": 0.17137574705993763,
+      "p99": 0.23879610621137534,
+      "max": 0.2556511959992349
+     }
+    },
+    "stolen": {
+     "n": 20,
+     "attacker_hits": 20,
+     "cached_tokens_mean": 2156.0,
+     "ttft": {
+      "n": 20,
+      "mean": 0.018316615396179257,
+      "p50": 0.018305736361071467,
+      "p90": 0.019055306212976575,
+      "p95": 0.019431848463136704,
+      "p99": 0.021220485011581327,
+      "max": 0.02166764414869249
+     }
+    }
+   },
+   "rows": [
+    {
+     "victim": "r00173",
+     "victim_user": "u016",
+     "attacker": "u014",
+     "acl": "group:g03",
+     "num_tokens": 2228,
+     "victim_cold_ttft": 0.14222658891230822,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.01764781796373427,
+     "victim_warm_cached": 2224,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.14260518201626837,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.1429286510683596,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.018287832848727703,
+       "cached_tokens": 2224,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00310",
+     "victim_user": "u010",
+     "attacker": "u015",
+     "acl": "group:g02",
+     "num_tokens": 2027,
+     "victim_cold_ttft": 0.12351615098305047,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.018534766975790262,
+     "victim_warm_cached": 2016,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.12403871491551399,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.12528481101617217,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.017916533863171935,
+       "cached_tokens": 2016,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00132",
+     "victim_user": "u015",
+     "attacker": "u017",
+     "acl": "user:u015",
+     "num_tokens": 2274,
+     "victim_cold_ttft": 0.14427508506923914,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.01844832510687411,
+     "victim_warm_cached": 2272,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.14445206802338362,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.14566791686229408,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.01853248314000666,
+       "cached_tokens": 2272,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00159",
+     "victim_user": "u019",
+     "attacker": "u008",
+     "acl": "group:g00&group:g03",
+     "num_tokens": 1749,
+     "victim_cold_ttft": 0.10820810706354678,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.017778454115614295,
+     "victim_warm_cached": 1744,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.10882302513346076,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.10906665283255279,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.017133801011368632,
+       "cached_tokens": 1744,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00099",
+     "victim_user": "u010",
+     "attacker": "u018",
+     "acl": "group:g02",
+     "num_tokens": 2588,
+     "victim_cold_ttft": 0.16509126708842814,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.018997738836333156,
+     "victim_warm_cached": 2576,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.16572092310525477,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.16694019711576402,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.019314175006002188,
+       "cached_tokens": 2576,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00101",
+     "victim_user": "u002",
+     "attacker": "u008",
+     "acl": "user:u002",
+     "num_tokens": 4071,
+     "victim_cold_ttft": 0.25450170203112066,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.021183544071391225,
+     "victim_warm_cached": 4064,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.25457610096782446,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.2556511959992349,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.02166764414869249,
+       "cached_tokens": 4064,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00100",
+     "victim_user": "u016",
+     "attacker": "u008",
+     "acl": "group:g02&group:g03",
+     "num_tokens": 2194,
+     "victim_cold_ttft": 0.14229018916375935,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.018372652120888233,
+     "victim_warm_cached": 2192,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.1428134141024202,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.1437827479094267,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.018559152958914638,
+       "cached_tokens": 2192,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00017",
+     "victim_user": "u003",
+     "attacker": "u017",
+     "acl": "group:g02&group:g03",
+     "num_tokens": 1399,
+     "victim_cold_ttft": 0.08634925191290677,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.016546885948628187,
+     "victim_warm_cached": 1392,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.086987494956702,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.08689072192646563,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.016584426863119006,
+       "cached_tokens": 1392,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00333",
+     "victim_user": "u017",
+     "attacker": "u014",
+     "acl": "group:g04",
+     "num_tokens": 2076,
+     "victim_cold_ttft": 0.13604685803875327,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.020158563973382115,
+     "victim_warm_cached": 2064,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.13728824397549033,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.137409552000463,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.018395425053313375,
+       "cached_tokens": 2064,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00358",
+     "victim_user": "u014",
+     "attacker": "u004",
+     "acl": "group:g01",
+     "num_tokens": 1703,
+     "victim_cold_ttft": 0.10794974095188081,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.017781178932636976,
+     "victim_warm_cached": 1696,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.10820690402761102,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.10921271797269583,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.017878232058137655,
+       "cached_tokens": 1696,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00144",
+     "victim_user": "u012",
+     "attacker": "u009",
+     "acl": "group:g00",
+     "num_tokens": 2121,
+     "victim_cold_ttft": 0.1382825360633433,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.017991424771025777,
+     "victim_warm_cached": 2112,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.13867326080799103,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.1394354049116373,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.017991815926507115,
+       "cached_tokens": 2112,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00257",
+     "victim_user": "u015",
+     "attacker": "u016",
+     "acl": "user:u015",
+     "num_tokens": 2432,
+     "victim_cold_ttft": 0.1542697879485786,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.019370008958503604,
+     "victim_warm_cached": 2416,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.15480690891854465,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.15490196808241308,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.019026543013751507,
+       "cached_tokens": 2416,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00037",
+     "victim_user": "u001",
+     "attacker": "u012",
+     "acl": "user:u001",
+     "num_tokens": 2293,
+     "victim_cold_ttft": 0.14492897619493306,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.018234162125736475,
+     "victim_warm_cached": 2288,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.15042756590992212,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.14562177006155252,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.018521883990615606,
+       "cached_tokens": 2288,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00047",
+     "victim_user": "u000",
+     "attacker": "u004",
+     "acl": "group:g03&group:g04",
+     "num_tokens": 2042,
+     "victim_cold_ttft": 0.12378372391685843,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.01776439812965691,
+     "victim_warm_cached": 2032,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.1244311339687556,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.12528010201640427,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.018351863138377666,
+       "cached_tokens": 2032,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00372",
+     "victim_user": "u005",
+     "attacker": "u013",
+     "acl": "group:g01&group:g04",
+     "num_tokens": 2122,
+     "victim_cold_ttft": 0.13871322595514357,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.017992026172578335,
+     "victim_warm_cached": 2112,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.13881379598751664,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.13953202706761658,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.01832363987341523,
+       "cached_tokens": 2112,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00070",
+     "victim_user": "u010",
+     "attacker": "u004",
+     "acl": "group:g00&group:g02",
+     "num_tokens": 2101,
+     "victim_cold_ttft": 0.137598728062585,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.01796918292529881,
+     "victim_warm_cached": 2096,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.13774070516228676,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.13861386897042394,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.01794945588335395,
+       "cached_tokens": 2096,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00081",
+     "victim_user": "u008",
+     "attacker": "u019",
+     "acl": "group:g00&group:g02",
+     "num_tokens": 1976,
+     "victim_cold_ttft": 0.12317476817406714,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.01742612081579864,
+     "victim_warm_cached": 1968,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.1232756080571562,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.12405100814066827,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.018027301877737045,
+       "cached_tokens": 1968,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00020",
+     "victim_user": "u016",
+     "attacker": "u019",
+     "acl": "user:u016",
+     "num_tokens": 2197,
+     "victim_cold_ttft": 0.14206615695729852,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.0186442241538316,
+     "victim_warm_cached": 2192,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.1425881499890238,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.14299921318888664,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.01827396615408361,
+       "cached_tokens": 2192,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00043",
+     "victim_user": "u013",
+     "attacker": "u010",
+     "acl": "user:u013",
+     "num_tokens": 2378,
+     "victim_cold_ttft": 0.15241247205995023,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.019156777998432517,
+     "victim_warm_cached": 2368,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.1530293629039079,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.1533671789802611,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.018456510035321116,
+       "cached_tokens": 2368,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00384",
+     "victim_user": "u010",
+     "attacker": "u006",
+     "acl": "group:g02",
+     "num_tokens": 1305,
+     "victim_cold_ttft": 0.08533319993875921,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.016929144971072674,
+     "victim_warm_cached": 1296,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.0849323661532253,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.08629941893741488,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.017139621078968048,
+       "cached_tokens": 1296,
+       "ok": true,
+       "error": null
+      }
+     }
+    }
+   ]
+  },
+  "B5": {
+   "summary": {
+    "victim_cold_ttft": {
+     "n": 20,
+     "mean": 0.11769755717832595,
+     "p50": 0.1130000229459256,
+     "p90": 0.14591115342918784,
+     "p95": 0.15285049262456596,
+     "p99": 0.15960284410975872,
+     "max": 0.16129093198105693
+    },
+    "victim_warm_ttft": {
+     "n": 20,
+     "mean": 0.017851841624360532,
+     "p50": 0.017756946850568056,
+     "p90": 0.01874935708474368,
+     "p95": 0.018789954273961483,
+     "p99": 0.019038751679472624,
+     "max": 0.01910095103085041
+    },
+    "no_salt": {
+     "n": 20,
+     "attacker_hits": 0,
+     "cached_tokens_mean": 0.0,
+     "ttft": {
+      "n": 20,
+      "mean": 0.118227236578241,
+      "p50": 0.11311062145978212,
+      "p90": 0.1457680253079161,
+      "p95": 0.15281726281391458,
+      "p99": 0.16037389347562564,
+      "max": 0.16226305114105344
+     }
+    },
+    "forged": {
+     "n": 20,
+     "attacker_hits": 0,
+     "cached_tokens_mean": 0.0,
+     "ttft": {
+      "n": 20,
+      "mean": 0.11883331147255376,
+      "p50": 0.11403917451389134,
+      "p90": 0.1464968379586935,
+      "p95": 0.1533629695768468,
+      "p99": 0.1606483540846966,
+      "max": 0.16246970021165907
+     }
+    },
+    "stolen": {
+     "n": 20,
+     "attacker_hits": 20,
+     "cached_tokens_mean": 1852.0,
+     "ttft": {
+      "n": 20,
+      "mean": 0.01763153097126633,
+      "p50": 0.017518292530439794,
+      "p90": 0.018581924587488176,
+      "p95": 0.018759074923582374,
+      "p99": 0.018939481363631785,
+      "max": 0.018984582973644137
+     }
+    }
+   },
+   "rows": [
+    {
+     "victim": "r00133",
+     "victim_user": "u006",
+     "attacker": "u002",
+     "acl": "group:g01&group:g04",
+     "num_tokens": 2273,
+     "victim_cold_ttft": 0.1438570290338248,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.017835409846156836,
+     "victim_warm_cached": 2272,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.1445928520988673,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.14523489214479923,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.01735972403548658,
+       "cached_tokens": 2272,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00008",
+     "victim_user": "u007",
+     "attacker": "u000",
+     "acl": "group:g01",
+     "num_tokens": 1223,
+     "victim_cold_ttft": 0.07756529306061566,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.016562693985179067,
+     "victim_warm_cached": 1216,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.07821327284909785,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.07933394191786647,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.01648955699056387,
+       "cached_tokens": 1216,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00149",
+     "victim_user": "u018",
+     "attacker": "u003",
+     "acl": "user:u018",
+     "num_tokens": 2121,
+     "victim_cold_ttft": 0.13794504012912512,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.018699035048484802,
+     "victim_warm_cached": 2112,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.13892275094985962,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.13923758291639388,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.018501744139939547,
+       "cached_tokens": 2112,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00061",
+     "victim_user": "u013",
+     "attacker": "u006",
+     "acl": "group:g02",
+     "num_tokens": 1319,
+     "victim_cold_ttft": 0.0850409041158855,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.017100005876272917,
+     "victim_warm_cached": 1312,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.08533593895845115,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.08628847193904221,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.01697025098837912,
+       "cached_tokens": 1312,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00388",
+     "victim_user": "u017",
+     "attacker": "u019",
+     "acl": "group:g00&group:g04",
+     "num_tokens": 2125,
+     "victim_cold_ttft": 0.13811649312265217,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.01812506397254765,
+     "victim_warm_cached": 2112,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.1389935831539333,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.1395290109794587,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.018539855955168605,
+       "cached_tokens": 2112,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00121",
+     "victim_user": "u000",
+     "attacker": "u005",
+     "acl": "group:g03&group:g04",
+     "num_tokens": 2254,
+     "victim_cold_ttft": 0.14372640196233988,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.01855181809514761,
+     "victim_warm_cached": 2240,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.14498599199578166,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.1450817531440407,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.01818783301860094,
+       "cached_tokens": 2240,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00202",
+     "victim_user": "u018",
+     "attacker": "u012",
+     "acl": "user:u018",
+     "num_tokens": 1353,
+     "victim_cold_ttft": 0.08551039709709585,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.017488908022642136,
+     "victim_warm_cached": 1344,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.08605611394159496,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.08674744586460292,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.017015366116538644,
+       "cached_tokens": 1344,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00092",
+     "victim_user": "u017",
+     "attacker": "u002",
+     "acl": "group:g00",
+     "num_tokens": 1302,
+     "victim_cold_ttft": 0.08507877518422902,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.017355195013806224,
+     "victim_warm_cached": 1296,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.0854994470719248,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.08599978894926608,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.016741611063480377,
+       "cached_tokens": 1296,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00181",
+     "victim_user": "u000",
+     "attacker": "u012",
+     "acl": "user:u000",
+     "num_tokens": 1377,
+     "victim_cold_ttft": 0.08600930590182543,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.01657697092741728,
+     "victim_warm_cached": 1376,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.08648384013213217,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.08726936811581254,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.01581475604325533,
+       "cached_tokens": 1376,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00231",
+     "victim_user": "u004",
+     "attacker": "u003",
+     "acl": "user:u004",
+     "num_tokens": 1658,
+     "victim_cold_ttft": 0.10303898993879557,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.017658306984230876,
+     "victim_warm_cached": 1648,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.10370280896313488,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.10349594010040164,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.01728763896971941,
+       "cached_tokens": 1648,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00033",
+     "victim_user": "u009",
+     "attacker": "u001",
+     "acl": "user:u009",
+     "num_tokens": 1990,
+     "victim_cold_ttft": 0.12324060313403606,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.017678483854979277,
+     "victim_warm_cached": 1984,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.12361345486715436,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.12438644003123045,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.0181365970056504,
+       "cached_tokens": 1984,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00053",
+     "victim_user": "u003",
+     "attacker": "u019",
+     "acl": "group:g02",
+     "num_tokens": 2279,
+     "victim_cold_ttft": 0.1451894750352949,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.01877358602359891,
+     "victim_warm_cached": 2272,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.14504001522436738,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.1456881738267839,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.01817037002183497,
+       "cached_tokens": 2272,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00079",
+     "victim_user": "u010",
+     "attacker": "u000",
+     "acl": "user:u010",
+     "num_tokens": 2519,
+     "victim_cold_ttft": 0.16129093198105693,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.01874666498042643,
+     "victim_warm_cached": 2512,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.16226305114105344,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.16246970021165907,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.018984582973644137,
+       "cached_tokens": 2512,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00383",
+     "victim_user": "u017",
+     "attacker": "u004",
+     "acl": "group:g00",
+     "num_tokens": 2246,
+     "victim_cold_ttft": 0.1440940040629357,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.017931601032614708,
+     "victim_warm_cached": 2240,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.1444601530674845,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.14578719018027186,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.018563559977337718,
+       "cached_tokens": 2240,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00024",
+     "victim_user": "u019",
+     "attacker": "u003",
+     "acl": "group:g00",
+     "num_tokens": 1897,
+     "victim_cold_ttft": 0.1129270198289305,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.0182728529907763,
+     "victim_warm_cached": 1888,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.11330826906487346,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.11369205103255808,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.017461224924772978,
+       "cached_tokens": 1888,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00309",
+     "victim_user": "u003",
+     "attacker": "u005",
+     "acl": "group:g02&group:g03",
+     "num_tokens": 1579,
+     "victim_cold_ttft": 0.10179030988365412,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.017530996818095446,
+     "victim_warm_cached": 1568,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.10188520816154778,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.10276018502190709,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.01705951988697052,
+       "cached_tokens": 1568,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00344",
+     "victim_user": "u003",
+     "attacker": "u019",
+     "acl": "group:g02&group:g03",
+     "num_tokens": 1821,
+     "victim_cold_ttft": 0.11137044103816152,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.017549111042171717,
+     "victim_warm_cached": 1808,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.11229512211866677,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.11275998712517321,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.01726353308185935,
+       "cached_tokens": 1808,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00289",
+     "victim_user": "u006",
+     "attacker": "u007",
+     "acl": "user:u006",
+     "num_tokens": 1893,
+     "victim_cold_ttft": 0.11307302606292069,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.017989390064030886,
+     "victim_warm_cached": 1888,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.11291297385469079,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.1143862979952246,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.017760328017175198,
+       "cached_tokens": 1888,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00328",
+     "victim_user": "u010",
+     "attacker": "u001",
+     "acl": "user:u010",
+     "num_tokens": 1639,
+     "victim_cold_ttft": 0.1026804440189153,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.017509786877781153,
+     "victim_warm_cached": 1632,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.10365976789034903,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.1036343399900943,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.01757536013610661,
+       "cached_tokens": 1632,
+       "ok": true,
+       "error": null
+      }
+     }
+    },
+    {
+     "victim": "r00373",
+     "victim_user": "u005",
+     "attacker": "u000",
+     "acl": "group:g01&group:g04",
+     "num_tokens": 2333,
+     "victim_cold_ttft": 0.15240625897422433,
+     "victim_cold_cached": 0,
+     "victim_warm_ttft": 0.01910095103085041,
+     "victim_warm_cached": 2320,
+     "probes": {
+      "no_salt": {
+       "ttft": 0.15232011605985463,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "forged": {
+       "ttft": 0.15288366796448827,
+       "cached_tokens": 0,
+       "ok": true,
+       "error": null
+      },
+      "stolen": {
+       "ttft": 0.018747206078842282,
+       "cached_tokens": 2320,
+       "ok": true,
+       "error": null
+      }
+     }
+    }
+   ]
+  }
+ }
+}

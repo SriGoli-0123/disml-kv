@@ -7,7 +7,6 @@ dist/
 data/raw/
 data/prepared/
 data/workloads/
-results/
 logs/
 *.log
 .pytest_cache/
