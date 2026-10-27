@@ -1,5 +1,8 @@
 from aclkv.acl import ACL
-from tests.conftest import make_workload
+try:
+    from tests.conftest import make_workload
+except (ImportError, ModuleNotFoundError):
+    from conftest import make_workload
 
 
 def test_requests_are_authorized_and_sized(mini_data):

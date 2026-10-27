@@ -10,8 +10,10 @@ from aclkv.ordering import RetrievedDoc
 from aclkv.pipeline import BuildSettings, build_prompts, make_builder
 from aclkv.policies import POLICIES, get_policy
 from aclkv.simulator import PrefixCacheSimulator, simulate
-from aclkv.tokenizer import FakeTokenizer
-from tests.conftest import make_workload
+try:
+    from tests.conftest import make_workload
+except (ImportError, ModuleNotFoundError):
+    from conftest import make_workload
 
 KEY = b"test-key"
 D = Directory(("alice", "bob", "eve"), ("hr",), {"alice": frozenset({"hr"}), "bob": frozenset({"hr"}), "eve": frozenset()})
