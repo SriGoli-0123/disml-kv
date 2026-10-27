@@ -90,6 +90,10 @@ echo "model=$MODEL kv_gibs=[$KV_GIBS] shares=[$SHARES] concs=[$CONCS] policies=[
 start_server() {  # $1 = kv gib, $2.. = extra vllm args
   local kv="$1"; shift
   local log_file="$LOG_DIR/vllm_kv${kv}_$(date +%s).log"
+  # Ensure no orphaned vLLM workers or stale IPC sockets occupy GPU VRAM
+  pkill -f "vllm" 2>/dev/null || true
+  rm -f /tmp/vllm_dist_* /tmp/vllm_* 2>/dev/null || true
+  sleep 2
   echo "--- Starting vLLM server in background: KV=${kv}GiB (log: $log_file)"
   bash scripts/start_vllm.sh "$kv" "$@" > "$log_file" 2>&1 &
   SERVER_PID=$!
@@ -100,8 +104,10 @@ stop_server() {
     kill "$SERVER_PID" 2>/dev/null || true
     wait "$SERVER_PID" 2>/dev/null || true
     SERVER_PID=""
-    sleep 5
   fi
+  pkill -f "vllm" 2>/dev/null || true
+  rm -f /tmp/vllm_dist_* /tmp/vllm_* 2>/dev/null || true
+  sleep 3
 }
 trap stop_server EXIT
 
@@ -115,8 +121,9 @@ bench_file_done() {
   local wl_stem; wl_stem="$(basename "$wl" .json)"
   local prefix=""
   [ -n "$tag" ] && prefix="${tag}_"
-  local target="$OUT_DIR/${prefix}${wl_stem}_c${c}_kv${kv}_${pol}.json"
-  if [ "$FORCE" != "1" ] && [ -s "$target" ]; then
+  local t1="$OUT_DIR/${prefix}${wl_stem}_c${c}_kv${kv}_${pol}.json"
+  local t2="$OUT_DIR/${prefix}${wl_stem}_c${c}_kv${kv}.0_${pol}.json"
+  if [ "$FORCE" != "1" ] && { [ -s "$t1" ] || [ -s "$t2" ]; }; then
     return 0
   else
     return 1
@@ -149,8 +156,9 @@ kv_budget_done() {
     done
   done
   if [ "${SECURITY_PROBE:-1}" = "1" ]; then
-    local probe_out="results/security_probe_kv${kv}.json"
-    if [ "$FORCE" != "1" ] && [ ! -s "$probe_out" ]; then
+    local p1="results/security_probe_kv${kv}.json"
+    local p2="results/security_probe_kv${kv}.0.json"
+    if [ "$FORCE" != "1" ] && [ ! -s "$p1" ] && [ ! -s "$p2" ]; then
       return 1
     fi
   fi

@@ -148,18 +148,27 @@ async def amain(args) -> None:
 
     needed_policies = []
     for pol in args.policies:
-        name = f"{args.tag + '_' if args.tag else ''}{Path(args.workload).stem}_c{args.concurrency}_kv{args.kv_gib}_{pol}.json"
-        target_file = out_dir / name
-        if not getattr(args, "force", False) and target_file.exists():
-            try:
-                with open(target_file) as f:
-                    data = json.load(f)
-                if "summary" in data and data["summary"].get("req_per_s") is not None:
-                    print(f"    [checkpoint] skipping already completed policy {pol} ({name})", flush=True)
-                    continue
-            except Exception:
-                pass
-        needed_policies.append(pol)
+        prefix = f"{args.tag + '_' if args.tag else ''}{Path(args.workload).stem}_c{args.concurrency}_"
+        candidates = [
+            out_dir / f"{prefix}kv{args.kv_gib}_{pol}.json",
+            out_dir / f"{prefix}kv{float(args.kv_gib):.1f}_{pol}.json" if args.kv_gib is not None else None,
+            out_dir / f"{prefix}kv{int(args.kv_gib)}_{pol}.json" if (args.kv_gib is not None and float(args.kv_gib).is_integer()) else None,
+        ]
+        already_done = False
+        if not getattr(args, "force", False):
+            for target_file in candidates:
+                if target_file and target_file.exists():
+                    try:
+                        with open(target_file) as f:
+                            data = json.load(f)
+                        if "summary" in data and data["summary"].get("req_per_s") is not None:
+                            print(f"    [checkpoint] skipping already completed policy {pol} ({target_file.name})", flush=True)
+                            already_done = True
+                            break
+                    except Exception:
+                        pass
+        if not already_done:
+            needed_policies.append(pol)
 
     if not needed_policies:
         print(f"    [checkpoint] all {len(args.policies)} policies already completed for {Path(args.workload).stem} c={args.concurrency} kv={args.kv_gib}. Skipping run.", flush=True)
