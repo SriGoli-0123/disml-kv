@@ -1,0 +1,15 @@
+\begin{tabular}{@{}l r r r@{}}
+\toprule
+Evidence order & Cached (\%) & Gold mid (\%) & Top-1 at edge (\%) \\
+\midrule
+Retrieval order & 4.59 & 31.4 & 100.0 \\
+Broad-to-narrow (v1 B4) & 4.62 & 33.9 & 76.1 \\
+Popularity-canonical (v1 B5) & 4.47 & 36.6 & 67.8 \\
++ relevance anchor (v1 B6) & 4.32 & 22.9 & 100.0 \\
+LongContextReorder & 4.32 & 19.7 & 100.0 \\
+Edge layout & 4.89 & 31.7 & 93.8 \\
+Prefix tree (CacheWeaver-style) & 5.69 & 32.6 & 76.6 \\
+Prefix tree, $k{=}3$ & 5.18 & 32.6 & 76.6 \\
+Privacy-aware tree, $k{=}3$ & 5.17 & 32.6 & 76.6 \\
+\bottomrule
+\end{tabular}
