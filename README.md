@@ -1,4 +1,79 @@
-# Access-Aware KV-Cache Sharing for Resource-Constrained RAG Serving
+# Access-Aware KV-Cache Sharing for Multi-Tenant RAG (AclKV)
+
+CSE 598 (Data-Intensive Systems for ML) project, extended into an ACL-style paper draft
+(`paper/`, official ACL template). **v2 (this branch, `feat/aclkv-v2`)** fixes the problems found in the
+v1 review and replaces the synthetic evaluation with retrieval-driven multi-tenant workloads.
+The original v1 implementation and runbook are kept at the end of this file and remain reproducible
+(policies `B0`–`B6`, `UB*` are exact aliases).
+
+## v2 in one paragraph
+
+Deriving KV-cache scopes from document ACLs is **free**: it reproduces the reuse of unrestricted
+sharing exactly (Proposition 1 in the paper). But it is **not private**: a co-authorized colleague who
+re-asks a guessed question learns from cache hits whether someone asked it. v1 leaked the *question text*
+(99.6% of insider probes) because the question inherited its documents' scope, and even with a
+private question the *retrieved-evidence fingerprint* singles out one colleague in 91.5% of probes.
+**AclKV** = ACL scope barriers + private question scope + **k-anonymous promotion** (an evidence prefix becomes
+shareable only after k distinct authorized users requested it) + CacheWeaver-style prefix-tree ordering.
+With k = 3 it singles out nobody (0%) while keeping 91% of the reuse of unrestricted cache-aware
+sharing (5.0× per-user isolation on HotpotQA, 9.2× on MuSiQue).
+
+## What changed from v1 (review findings → fixes)
+
+| Review finding | Fix in v2 | Where |
+|---|---|---|
+| Question inherited the documents' scope → colleagues could hit another user's question | question tail always in the requester's private scope (`Policy.tail_scope="private"`) | `aclkv/policies.py` |
+| Headline security results were true by construction | insider attacker *through* the middleware, anonymity-set metric; by-construction checks kept as tests | `aclkv/attacks.py`, `tests/test_v2.py` |
+| Retrieved-evidence fingerprint singles out colleagues | k-anonymous promotion (`PromotionTracker`) | `aclkv/privacy.py` |
+| 41–48% gains came from injected random "hot" passages | topic-clustered organization, ACLs tied to topic ownership, **real BM25/dense/hybrid top-k retrieval over the full corpus**, paraphrase noise, pinned-handbook scenario | `aclkv/retrieval.py`, `aclkv/workload.py` |
+| ~165 distinct questions, 1 seed, no significance | 5,000 requests, ~1,600 / ~1,050 distinct questions, 3 seeds, dev/test split, question-clustered bootstrap + McNemar | `aclkv/stats.py` |
+| No head-to-head baselines | per-user (vLLM/KVGov), divergence salt (KVGov), public/private (SafeKV-style), CacheWeaver-style tree ordering, LongContextReorder | `aclkv/policies.py`, `aclkv/ordering.py` |
+| ACL-ordering interaction never isolated | ablations: privacy-aware tree walk, edge layout, v1 orderings (all reported; none beats the plain tree) | `scripts/run_v2.py ablation` |
+| "Same content, different context" | position-independent (CacheBlend-style) chunk caching in the simulator, own-ACL scoping | `aclkv/simulator.py` (`mode="pic"`) |
+| Scale: 20 users, 1 model, 1 dataset | 20/100/500 users, 10/20/40 passages, 1–16 GiB, 7B/8B/32B KV geometry, HotpotQA + MuSiQue | `configs/v2.json` |
+| Closed loop only, no judge | open-loop Poisson arrivals + TTFT-SLO goodput, LLM judge (API-key aware), vLLM `salt_regions` adapter | `aclkv/bench.py`, `aclkv/scope.py` |
+
+## v2 results (simulator, validated against the 192 live A100 runs on `main`)
+
+* Simulator vs. live vLLM: mean abs. error **0.055 pp** over 192 runs (r = 0.99997); live mean TTFT is linear in recomputed tokens (R² = 0.998).
+* 2 GiB, HotpotQA (3 seeds): per-user 1.13%, divergence 4.67%, ACL scopes 5.20%, ACL + tree 6.25%, **AclKV 5.67%**, global (insecure) 5.20%.
+* Insider probes: ACL scopes single out a colleague in 91.5%; **AclKV: 0%** (min anonymity set 2); per-user/divergence: 0% (but far less reuse).
+* Gains grow with tenants (1.5× → 17.8× vs. per-user from 20 → 500 users), KV budget (ACL + tree 5.4% → 14.3% from 1 → 16 GiB) and shared context (pinned handbook: 32.8% vs. 5.7% per-user).
+* The v1 synthetic-injection workload overstated reuse **6.6×**.
+* Answer quality (v1 live pilot, question-clustered bootstrap): no significant change from cache-aware ordering (all 95% CIs contain 0).
+
+Pending GPU measurements (TTFT/goodput/EM/F1/judge on the realistic workloads, 4 models) appear as red **TBD** in the paper.
+
+## Running v2
+
+```bash
+pip install -e ".[dev]"                     # + ".[dense]" for dense/hybrid retrieval
+python scripts/prepare_data.py --dataset hotpotqa --max-questions 0 --out-dir data/prepared_hotpotqa_full
+python scripts/prepare_data.py --dataset musique --max-questions 0
+python scripts/gen_workloads_v2.py          # 16 workloads, ~1 min
+python scripts/run_v2.py                    # main, privacy, ablation, pic, scaling (~15 min on 10 cores)
+python scripts/run_v2.py retriever          # after: gen_workloads_v2.py hq_main_s0 hq_main_s1 hq_main_s2 --retrieval dense --suffix _dense (and hybrid)
+python scripts/analyze_live_v1.py           # fidelity / TTFT model / paired quality from results/bench
+python scripts/make_paper_assets.py         # paper/figures, paper/tables, paper/numbers.tex
+cd paper && tectonic acl_latex.tex          # or upload paper/ to Overleaf
+```
+
+GPU (ASU SOL, one A100 per cell; 4 models × {2, 8} GiB):
+
+```bash
+bash scripts/setup_a100.sh                  # once: venv, vLLM 0.29.0, data, workloads, manifest
+sbatch --array=0-7 scripts/sol_array.sbatch
+JUDGE_URL=https://openai.rc.asu.edu/v1 JUDGE_MODEL=qwen3-235b-a22b-instruct-2507 JUDGE_API_KEY=$SOL_API_KEY \
+  sbatch --array=0 --export=ALL,WHAT=quality scripts/sol_array.sbatch
+python scripts/analyze_live_v2.py && python scripts/make_paper_assets.py   # fills the TBD cells
+```
+
+Cells 6–7 (Qwen2.5-32B) need 2 GPUs: `sbatch --gres=gpu:a100:2 --export=ALL,VLLM_EXTRA_ARGS="--tensor-parallel-size 2" ...`.
+Llama-3.1-8B is gated on Hugging Face (`export HF_TOKEN=...`).
+
+---
+
+# v1 (original proposal implementation)
 
 CSE 598 (Data-Intensive Systems for ML) project — Vedang Vasant Avaghade, Sri Harshith Goli.
 
@@ -15,7 +90,7 @@ Everything is inference-only: no training, no kernels, one small vLLM plugin.
 
 ---
 
-## 1. What is implemented (proposal → code)
+### v1-1. What is implemented (proposal → code)
 
 | Proposal component | Where | Notes |
 |---|---|---|
@@ -68,7 +143,7 @@ implements the same barriers as in-prompt sentinel tokens and works on a stock v
 
 ---
 
-## 2. Quick start without a GPU (simulator, ~2 min)
+### v1-2. Quick start without a GPU (simulator, ~2 min)
 
 ```bash
 git clone https://github.com/SriGoli-0123/disml-kv.git && cd disml-kv
@@ -89,9 +164,9 @@ blocks, unauthorized hits, probe leaks). TTFT and throughput need the live serve
 
 ---
 
-## 3. A100 runbook
+### v1-3. A100 runbook
 
-### 3.1 One-time setup
+### v1-3.1 One-time setup
 
 ```bash
 git clone https://github.com/SriGoli-0123/disml-kv.git && cd disml-kv
@@ -104,7 +179,7 @@ export ACLKV_SCOPE_KEY=$(python -c "import secrets; print(secrets.token_hex(32))
 On ASU SOL do this on a login node inside `/scratch/$USER`, with `module load mamba/latest cuda-12.1.1-gcc-12.1.0`
 first and `VENV=/scratch/$USER/aclkv-venv HF_HOME=/scratch/$USER/hf_cache`.
 
-### 3.2 Start the server (shell 1) and verify the plugin (shell 2)
+### v1-3.2 Start the server (shell 1) and verify the plugin (shell 2)
 
 ```bash
 bash scripts/start_vllm.sh 2            # Qwen2.5-7B-Instruct, KV cache capped at 2 GiB, port 8000
@@ -120,7 +195,7 @@ blocks hit — without the plugin this is 0); no salt / forged scope id → 0; s
 still behaves like vanilla vLLM. Look for `aclkv: scoped prefix-cache hashing installed` in
 the server log.
 
-### 3.3 Run the experiments
+### v1-3.3 Run the experiments
 
 ```bash
 # ~25 min: 2 GiB, share {0, 0.5}, C=16, policies B0 B1 B3 B4 B5 UB, + security probe
@@ -191,9 +266,9 @@ Useful knobs: `MODEL=Qwen/Qwen3-8B CHAT_FORMAT=qwen3` (Qwen3 non-thinking templa
 
 ---
 
-## 4. What to expect
+### v1-4. What to expect
 
-### 4.1 Baselines and improvements (simulator, real HotpotQA prompts, 20 users / 5 groups / 400 requests)
+### v1-4.1 Baselines and improvements (simulator, real HotpotQA prompts, 20 users / 5 groups / 400 requests)
 
 Pre-computed simulator outputs are checked in under [`docs/`](docs/): figures in
 [`docs/plots/`](docs/plots/), the full sweep in [`docs/sim/sim_matrix_summary.csv`](docs/sim/sim_matrix_summary.csv)
@@ -259,7 +334,7 @@ Reading the table:
   on the live server); reuse still helps because fewer blocks are recomputed, but absolute
   hit rates are lower. 4 GiB shows the largest hit rates.
 
-### 4.2 Live server (what the bench adds)
+### v1-4.2 Live server (what the bench adds)
 
 * **TTFT** tracks recomputed prompt tokens: with ~1.7k-token prompts on an A100, expect cold
   TTFT of a few hundred ms at C=16; B5 at share ≥ 0.5 should cut p50 TTFT by roughly the cached
@@ -275,7 +350,7 @@ Reading the table:
 * **Preemptions / waiting** at 1 GiB are the price of the budget; compare across policies at
   the same budget.
 
-### 4.3 Metrics glossary
+### v1-4.3 Metrics glossary
 
 | metric | source | meaning |
 |---|---|---|
@@ -290,9 +365,9 @@ Reading the table:
 
 ---
 
-## 5. Design notes and limitations
+### v1-5. Design notes and limitations
 
-### 5.1 Ordering vs. answer quality: the relevance anchor (challenge C3)
+### v1-5.1 Ordering vs. answer quality: the relevance anchor (challenge C3)
 
 Canonical ordering creates reuse, but it also moves the documents that answer *this* question.
 Measured on the 50 %-overlap workload (position 0 = first document, 9 = last, i.e. adjacent to
@@ -339,7 +414,7 @@ still needs the A100 run (`--max-shift` and `--anchor-k` ablations are scripted 
   filter removes restricted chunks the requester cannot read; both are recorded in the
   workload file (`stats.evidence_acl_mix`).
 
-## 6. Repository layout
+### v1-6. Repository layout
 
 ```
 aclkv/            package (see table in §1)

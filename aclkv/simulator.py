@@ -45,7 +45,7 @@ def _hash(parent: bytes | None, tokens: tuple[int, ...], extra: tuple | None) ->
 
 
 class _Block:
-    __slots__ = ("bid", "hash", "ref_cnt", "acl", "from_probe")
+    __slots__ = ("bid", "hash", "ref_cnt", "acl", "from_probe", "contributors")
 
     def __init__(self, bid: int):
         self.bid = bid
@@ -53,6 +53,7 @@ class _Block:
         self.ref_cnt = 0
         self.acl: ACL = PUBLIC
         self.from_probe = False     # computed by an adversarial probe, not an honest request
+        self.contributors: set[str] = set()   # users whose requests computed or reused this block
 
 
 class _FreeQueue:
@@ -98,6 +99,8 @@ class SimRecord:
     table_size: int
     free_blocks: int
     probe: bool = False
+    informative_positions: list = field(default_factory=list)   # hit block indices computed by *other* users
+    honest_hit_blocks: int = 0      # hits on blocks computed by honest (non-probe) requests
 
     @property
     def recomputed_tokens(self) -> int:
@@ -126,6 +129,7 @@ class SimSummary:
     probe_requests: int = 0
     probe_unauthorized_hits: int = 0      # must be 0 for every secure policy
     probe_cached_tokens: int = 0
+    mode: str = "prefix"
     extra: dict = field(default_factory=dict)
 
     def to_json(self) -> dict:
@@ -140,14 +144,29 @@ class PrefixCacheSimulator:
         block_size: int = 16,
         max_concurrency: int = 8,
         output_tokens: int = 32,
+        mode: str = "prefix",
+        pic_recompute: float = 0.15,
+        pic_scoping: str = "acl",
     ):
+        """``mode="prefix"`` mirrors vLLM automatic prefix caching.  ``mode="pic"``
+        models *position-independent* chunk caching (CacheBlend-style): each
+        evidence chunk's KV is cached independently of what precedes it and
+        reused at any position, with a fraction ``pic_recompute`` of its tokens
+        recomputed to restore cross-chunk attention.  ``pic_scoping`` keys chunk
+        entries by the chunk's *own* ACL ("acl"), not at all ("global"), or per
+        user ("user")."""
         if num_blocks < 2:
             raise ValueError("need at least 2 blocks")
+        if mode not in ("prefix", "pic"):
+            raise ValueError(mode)
         self.num_blocks = num_blocks
         self.bs = block_size
         self.max_concurrency = max_concurrency
         self.output_tokens = output_tokens
         self.directory = directory
+        self.mode = mode
+        self.pic_recompute = pic_recompute
+        self.pic_scoping = pic_scoping
         self.reset()
 
     # ----------------------------------------------------------- state
@@ -223,37 +242,83 @@ class PrefixCacheSimulator:
         rec.probe = True
         return rec
 
+    def _pic_hashes(self, prompt: BuiltPrompt) -> tuple[list[bytes], list[float], list[bool]]:
+        """Per-block hashes for position-independent caching: the hash chain
+        restarts at every segment, chunks are keyed by their own ACL, and the
+        question tail is never shareable.  Also returns, per block, the
+        fraction of its tokens saved on a hit and whether it may hit at all."""
+        bs = self.bs
+        ids = prompt.token_ids
+        hashes, saved, can_hit = [], [], []
+        seg_of = [prompt.segment_at(i * bs) for i in range(len(ids) // bs)]
+        parent, cur_seg = None, None
+        for i, seg in enumerate(seg_of):
+            if seg is not cur_seg:
+                parent, cur_seg = None, seg
+            if seg.name == "preamble":
+                extra = ("system",)
+                frac, ok = 1.0, True
+            elif seg.name in ("doc", "pinned"):
+                if self.pic_scoping == "acl":
+                    extra = ("acl", (seg.own_acl or seg.acl).canonical())
+                elif self.pic_scoping == "user":
+                    extra = ("user", prompt.user)
+                else:
+                    extra = None
+                frac, ok = 1.0 - self.pic_recompute, True
+            else:                                     # tail / markers: request-private
+                extra = ("req", prompt.req_id)
+                frac, ok = 0.0, False
+            h = _hash(parent, tuple(ids[i * bs:(i + 1) * bs]), extra)
+            hashes.append(h)
+            saved.append(frac)
+            can_hit.append(ok)
+            parent = h
+        return hashes, saved, can_hit
+
     def process(self, prompt: BuiltPrompt, output_tokens: int | None = None) -> SimRecord:
         bs = self.bs
         n = prompt.num_tokens
         out_tokens = self.output_tokens if output_tokens is None else output_tokens
-        hashes = self.block_hashes(prompt)
-        self._seen_hashes.update(hashes)
+        is_probe = bool(prompt.meta.get("probe"))
 
-        # longest cached prefix, capped at num_tokens - 1
-        max_hits = (n - 1) // bs
-        hits: list[int] = []
-        for h in hashes[:max_hits]:
-            bid = self.table.get(h)
-            if bid is None:
-                break
-            hits.append(bid)
+        if self.mode == "prefix":
+            hashes = self.block_hashes(prompt)
+            # longest cached prefix, capped at num_tokens - 1
+            max_hits = (n - 1) // bs
+            hit_pos: list[int] = []
+            for i, h in enumerate(hashes[:max_hits]):
+                if h not in self.table:
+                    break
+                hit_pos.append(i)
+            saved = [1.0] * len(hashes)
+        else:
+            hashes, saved, can_hit = self._pic_hashes(prompt)
+            hit_pos = [i for i, h in enumerate(hashes) if can_hit[i] and h in self.table]
+        self._seen_hashes.update(hashes)
+        hits = [self.table[hashes[i]] for i in hit_pos]
+        hit_set = set(hit_pos)
 
         # cache-hit gate audit (ground truth): a leak is a hit on state computed by an
         # *honest* request whose effective ACL does not include the requester
-        is_probe = bool(prompt.meta.get("probe"))
         unauthorized = 0
         bad_acls: list[str] = []
-        for bid in hits:
+        informative: list[int] = []
+        honest_hits = 0
+        for i, bid in zip(hit_pos, hits):
             blk = self.blocks[bid]
+            if prompt.user not in blk.contributors:
+                informative.append(i)
             if blk.from_probe:
                 continue
+            honest_hits += 1
             if not blk.acl.allows(prompt.user, self.directory):
                 unauthorized += 1
                 bad_acls.append(blk.acl.canonical())
 
         total_tokens = n + out_tokens
-        need = math.ceil(total_tokens / bs) - len(hits)
+        n_total_blocks = math.ceil(total_tokens / bs)
+        need = n_total_blocks - len(hits)
         # hit blocks that are currently free will be removed from the free queue by
         # ``touch`` — vLLM subtracts them too (``num_evictable_computed_blocks``)
         evictable_hits = sum(1 for bid in hits if self.blocks[bid].ref_cnt == 0)
@@ -281,36 +346,54 @@ class PrefixCacheSimulator:
                     del self.table[b.hash]
                 b.hash = None
                 b.from_probe = False
+                b.contributors = set()
                 evictions += 1
             b.ref_cnt = 1
             new_bids.append(bid)
 
-        all_bids = hits + new_bids
-        for i in range(len(hits), len(hashes)):          # newly computed full prompt blocks
-            b = self.blocks[all_bids[i]]
+        # block position -> physical block
+        assign: list[int] = []
+        it = iter(new_bids)
+        hit_iter = dict(zip(hit_pos, hits))
+        for i in range(n_total_blocks):
+            assign.append(hit_iter[i] if i in hit_set else next(it))
+        for i in range(len(hashes)):                       # newly computed full prompt blocks
+            if i in hit_set:
+                continue
+            b = self.blocks[assign[i]]
             b.hash = hashes[i]
-            b.acl = prompt.acl_at(i * bs + bs - 1)
+            if self.mode == "pic":
+                # a position-independent chunk is encoded in isolation: its true label is its own ACL
+                seg = prompt.segment_at(i * bs)
+                b.acl = seg.own_acl if seg.own_acl is not None else (PUBLIC if seg.name == "preamble" else seg.acl)
+            else:
+                b.acl = prompt.acl_at(i * bs + bs - 1)
             b.from_probe = is_probe
-            self.table.setdefault(hashes[i], all_bids[i])
+            self.table.setdefault(hashes[i], assign[i])
         final_acl = prompt.segments[-1].acl
         for i in range(len(hashes), total_tokens // bs):  # full decode blocks (unique)
             h = _hash(None, (i,), ("out", prompt.req_id))
-            b = self.blocks[all_bids[i]]
+            b = self.blocks[assign[i]]
             b.hash = h
             b.acl = final_acl
             b.from_probe = is_probe
-            self.table[h] = all_bids[i]
+            self.table[h] = assign[i]
+        for i in range(len(hashes)):
+            self.blocks[assign[i]].contributors.add(prompt.user)
 
-        self.in_flight.append((prompt.req_id, all_bids))
+        self.in_flight.append((prompt.req_id, assign))
         while len(self.in_flight) > self.max_concurrency:
             self._retire_oldest()
 
+        cached = int(round(sum(bs * saved[i] for i in hit_pos)))
         rec = SimRecord(
             req_id=prompt.req_id, user=prompt.user, policy=prompt.policy,
-            prompt_tokens=n, cached_tokens=len(hits) * bs, hit_blocks=len(hits),
+            prompt_tokens=n, cached_tokens=cached, hit_blocks=len(hits),
             unauthorized_hits=unauthorized, unauthorized_acls=bad_acls,
             evictions=evictions, new_blocks=len(new_bids), stalls=stalls,
             table_size=len(self.table), free_blocks=len(self.free),
+            informative_positions=informative if (is_probe or prompt.meta.get("record_positions")) else [],
+            honest_hit_blocks=honest_hits,
         )
         self.records.append(rec)
         self._table_sizes.append(len(self.table))
@@ -338,16 +421,19 @@ class PrefixCacheSimulator:
             probe_requests=len(probes),
             probe_unauthorized_hits=sum(r.unauthorized_hits for r in probes),
             probe_cached_tokens=sum(r.cached_tokens for r in probes),
+            mode=self.mode,
         )
 
 
 def simulate(prompts, num_blocks: int, directory: Directory, block_size: int = 16,
              max_concurrency: int = 8, output_tokens: int = 32,
              output_lengths: dict[str, int] | None = None,
-             probe_rate: float = 0.0, probe_mode: str = "no_salt", seed: int = 0) -> tuple[list[SimRecord], SimSummary]:
+             probe_rate: float = 0.0, probe_mode: str = "no_salt", seed: int = 0,
+             mode: str = "prefix", pic_recompute: float = 0.15, pic_scoping: str = "acl") -> tuple[list[SimRecord], SimSummary]:
     """Replay ``prompts``; with probability ``probe_rate`` after each request an
     unauthorized user replays it adversarially (see ``PrefixCacheSimulator.probe``)."""
-    sim = PrefixCacheSimulator(num_blocks, directory, block_size, max_concurrency, output_tokens)
+    sim = PrefixCacheSimulator(num_blocks, directory, block_size, max_concurrency, output_tokens,
+                               mode=mode, pic_recompute=pic_recompute, pic_scoping=pic_scoping)
     rng = random.Random(seed)
     users = list(directory.users)
     for p in prompts:

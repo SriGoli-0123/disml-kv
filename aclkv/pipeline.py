@@ -8,7 +8,7 @@ from pathlib import Path
 
 from .context import BuiltPrompt, ContextBuilder
 from .data_prep import Chunk, load_corpus
-from .ordering import OrderingConfig, PopularityTracker
+from .ordering import OrderingConfig, PopularityTracker, PrefixTree
 from .policies import Policy, get_policy
 from .scope import load_scope_key
 from .tokenizer import TokenizerLike, load_tokenizer
@@ -25,6 +25,7 @@ class BuildSettings:
     max_shift: int | None = None
     min_pop: float = 1.0
     anchor_k: int = 0
+    tree_window: int = 512
     popularity_decay: float = 0.98
 
     def to_json(self) -> dict:
@@ -49,12 +50,15 @@ def build_prompts(workload: Workload, corpus: dict[str, Chunk], policy: Policy |
     pol = get_policy(policy) if isinstance(policy, str) else policy
     ordering = OrderingConfig(name=pol.ordering, max_shift=settings.max_shift, min_pop=settings.min_pop,
                               anchor_k=settings.anchor_k,
-                              popularity=PopularityTracker(settings.popularity_decay))
+                              popularity=PopularityTracker(settings.popularity_decay),
+                              tree=PrefixTree(settings.tree_window))
+    pinned = workload.pinned_docs(corpus)
     out: list[BuiltPrompt] = []
     for r in workload.requests:
         docs = r.retrieved_docs(corpus)
-        p = builder.build(r.req_id, r.user, r.question, docs, pol, ordering=ordering)
-        p.meta.update({"qid": r.qid, "answer": r.answer, "question": r.question})
+        p = builder.build(r.req_id, r.user, r.question, docs, pol, ordering=ordering, pinned=pinned)
+        p.meta.update({"qid": r.qid, "answer": r.answer, "answers": r.answers or [r.answer], "question": r.question,
+                       "gold": [d["chunk_id"] for d in r.docs if d.get("is_gold")], "topic": r.topic})
         out.append(p)
     return out
 

@@ -21,6 +21,7 @@ from typing import Sequence
 from .acl import ACL, PUBLIC, Directory, authorization_filter
 from .ordering import OrderingConfig, RetrievedDoc, apply_ordering
 from .policies import Policy, SegmentScope, plan_scopes
+from .privacy import PromotionTracker
 from .scope import Barrier, encode_cache_salt
 from .tokenizer import TokenizerLike
 
@@ -77,13 +78,16 @@ CHAT_FORMATS: dict[str, ChatFormat] = {
 
 @dataclass(frozen=True)
 class Segment:
-    name: str            # "preamble" | "doc" | "marker" | "tail"
+    name: str            # "preamble" | "pinned" | "doc" | "marker" | "tail"
     start: int
     end: int             # exclusive, includes padding
     n_pad: int
     scope_id: str | None
     acl: ACL
     chunk_id: str | None = None
+    shared: bool = True          # scope shared across users (False: per-user / nonce)
+    prefix_key: str = ""         # digest of the evidence prefix ending at this segment
+    own_acl: ACL | None = None   # the document's own ACL (position-independent caching)
 
 
 @dataclass
@@ -105,10 +109,13 @@ class BuiltPrompt:
 
     def acl_at(self, token_idx: int) -> ACL:
         """Effective ACL of the prefix ending at ``token_idx`` (inclusive)."""
+        return self.segment_at(token_idx).acl if self.segments else PUBLIC
+
+    def segment_at(self, token_idx: int) -> "Segment":
         for s in self.segments:
             if s.start <= token_idx < s.end:
-                return s.acl
-        return self.segments[-1].acl if self.segments else PUBLIC
+                return s
+        return self.segments[-1]
 
     def to_json(self) -> dict:
         return {
@@ -162,6 +169,7 @@ class ContextBuilder:
             # fall back to the first id; only matters for exact alignment
             self._pad_ids = self._pad_ids[:1]
         self._cache: dict[str, list[int]] = {}
+        self._aud_cache: dict[str, int] = {}
 
     # ------------------------------------------------------------ helpers
     def _encode_cached(self, text: str) -> list[int]:
@@ -181,6 +189,14 @@ class ContextBuilder:
         return ids + self._pad_ids * n, n
 
     # -------------------------------------------------------------- build
+    def _audience_size(self, acl: ACL) -> int:
+        key = acl.canonical()
+        n = self._aud_cache.get(key)
+        if n is None:
+            n = len(acl.audience(self.directory))
+            self._aud_cache[key] = n
+        return n
+
     def build(
         self,
         req_id: str,
@@ -189,21 +205,39 @@ class ContextBuilder:
         docs: Sequence[RetrievedDoc],
         policy: Policy,
         ordering: OrderingConfig | None = None,
+        pinned: Sequence[RetrievedDoc] = (),
+        observe: bool = True,
     ) -> BuiltPrompt:
+        """Build one scoped prompt.  ``pinned`` documents (e.g. an always-included
+        handbook) go right after the preamble in every ordering.  ``observe=False``
+        builds without updating the middleware state (used for what-if analyses)."""
         ordering = ordering or self.ordering
         # 1. authorization filter (defensive; the workload already enforces it)
         kept, dropped = authorization_filter(docs, user, self.directory)
+        pinned_kept, pinned_dropped = authorization_filter(pinned, user, self.directory)
         # 3. context builder: ordering
         anchor_k = policy.anchor_k or ordering.anchor_k
+        if policy.kanon > 1 and ordering.promotion is None:
+            ordering.promotion = PromotionTracker(policy.kanon)
         ordered = apply_ordering(policy.ordering, kept, popularity=ordering.popularity,
                                  min_pop=ordering.min_pop, max_shift=ordering.max_shift,
-                                 anchor_k=anchor_k)
-        ordering.popularity.observe([d.chunk_id for d in ordered])
-        # 2. prefix ACL propagation + 4. scope plan
-        scopes: list[SegmentScope] = plan_scopes(policy.caching, user, ordered, self.key)
+                                 anchor_k=anchor_k, tree=ordering.tree,
+                                 audience_size=self._audience_size, kanon=policy.kanon)
+        full = list(pinned_kept) + ordered
+        # 2. prefix ACL propagation + 4. scope plan (+ private tail, k-anonymous promotion)
+        scopes: list[SegmentScope] = plan_scopes(
+            policy.caching, user, full, self.key, tail_scope=policy.tail_scope, kanon=policy.kanon,
+            promotion=ordering.promotion if observe else _ReadOnlyPromotion(ordering.promotion),
+            audience_size=self._audience_size)
+        if observe:
+            ordering.popularity.observe([d.chunk_id for d in ordered])
+            ordering.tree.observe([d.chunk_id for d in ordered], user)
 
         texts: list[tuple[str, str, str | None]] = []   # (name, text, chunk_id)
         texts.append(("preamble", self.fmt.preamble.format(system=self.system, instructions=self.instructions), None))
+        own = {d.chunk_id: d.acl for d in full}
+        for d in pinned_kept:
+            texts.append(("pinned", self.fmt.doc.format(title=d.title, text=d.text), d.chunk_id))
         for d in ordered:
             texts.append(("doc", self.fmt.doc.format(title=d.title, text=d.text), d.chunk_id))
         texts.append(("tail", self.fmt.tail.format(question=question), None))
@@ -218,7 +252,8 @@ class ContextBuilder:
             if new_scope and self.scope_mode == "marker":
                 # in-prompt sentinel: works with an unmodified vLLM
                 mids, npad = self._pad(self._encode_cached(f"<scope {sc.scope_id}>\n"))
-                segments.append(Segment("marker", len(token_ids), len(token_ids) + len(mids), npad, sc.scope_id, sc.acl))
+                segments.append(Segment("marker", len(token_ids), len(token_ids) + len(mids), npad, sc.scope_id,
+                                        sc.acl, None, sc.shared, sc.prefix_key))
                 token_ids.extend(mids)
             start = len(token_ids)
             is_last = i == len(texts) - 1
@@ -229,11 +264,13 @@ class ContextBuilder:
             if new_scope and self.scope_mode == "hash":
                 barriers.append(Barrier(start, sc.scope_id, sc.acl.canonical()))
             token_ids.extend(ids)
-            segments.append(Segment(name, start, len(token_ids), npad, sc.scope_id, sc.acl, chunk_id))
+            segments.append(Segment(name, start, len(token_ids), npad, sc.scope_id, sc.acl, chunk_id,
+                                    sc.shared, sc.prefix_key, own.get(chunk_id)))
             if sc.scope_id is not None:
                 prev_scope = sc.scope_id
 
         cache_salt = encode_cache_salt(barriers) if (self.scope_mode == "hash" and barriers) else None
+        n_shared_docs = sum(1 for seg in segments if seg.name in ("doc", "pinned") and seg.shared)
         return BuiltPrompt(
             req_id=req_id,
             user=user,
@@ -242,10 +279,25 @@ class ContextBuilder:
             barriers=barriers,
             cache_salt=cache_salt,
             ordered_chunk_ids=[d.chunk_id for d in ordered],
-            n_dropped_by_filter=len(dropped),
+            n_dropped_by_filter=len(dropped) + len(pinned_dropped),
             policy=policy.name,
-            meta={"ordering": policy.ordering, "caching": policy.caching, "n_docs": len(ordered)},
+            meta={"ordering": policy.ordering, "caching": policy.caching, "n_docs": len(ordered),
+                  "anchor_k": anchor_k, "kanon": policy.kanon, "tail_scope": policy.tail_scope,
+                  "n_pinned": len(pinned_kept), "n_shared_docs": n_shared_docs},
         )
 
     def render_text(self, prompt: BuiltPrompt) -> str:
         return self.tok.decode(prompt.token_ids)
+
+
+class _ReadOnlyPromotion:
+    """Wraps a PromotionTracker so ``plan_scopes`` can query it without recording."""
+
+    def __init__(self, inner):
+        self._inner = inner
+
+    def would_share(self, key, user):
+        return True if self._inner is None else self._inner.would_share(key, user)
+
+    def observe(self, key, user):
+        return None

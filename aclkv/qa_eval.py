@@ -46,15 +46,27 @@ def contains(pred: str, gold: str) -> float:
     return float(normalize_answer(gold) in normalize_answer(pred))
 
 
+def score_one(pred: str, gold) -> dict:
+    """EM / F1 / contains for one prediction; ``gold`` may be a string or a list
+    of acceptable answers (MuSiQue aliases) — the max over aliases is taken."""
+    golds = [gold] if isinstance(gold, str) else [g for g in gold if g]
+    p = clean_prediction(pred)
+    return {
+        "em": max(exact_match(p, g) for g in golds),
+        "f1": max(f1_score(p, g) for g in golds),
+        "contains": max(contains(pred, g) for g in golds),
+    }
+
+
 def evaluate(pairs) -> dict:
-    """``pairs``: iterable of (prediction_text, gold_answer)."""
+    """``pairs``: iterable of (prediction_text, gold_answer_or_alias_list)."""
     n = em = f1 = ct = 0
     for pred, gold in pairs:
-        p = clean_prediction(pred)
+        sc = score_one(pred, gold)
         n += 1
-        em += exact_match(p, gold)
-        f1 += f1_score(p, gold)
-        ct += contains(pred, gold)
+        em += sc["em"]
+        f1 += sc["f1"]
+        ct += sc["contains"]
     if n == 0:
         return {"n": 0}
     return {"n": n, "em": em / n, "f1": f1 / n, "contains": ct / n}
@@ -69,7 +81,8 @@ JUDGE_PROMPT = (
 )
 
 
-async def llm_judge(session, base_url: str, model: str, question: str, gold: str, pred: str) -> bool | None:
+async def llm_judge(session, base_url: str, model: str, question: str, gold: str, pred: str,
+                    api_key: str | None = None) -> bool | None:
     payload = {
         "model": model,
         "messages": [{"role": "user", "content": JUDGE_PROMPT.format(question=question, gold=gold, pred=clean_prediction(pred) or pred)}],
@@ -78,7 +91,13 @@ async def llm_judge(session, base_url: str, model: str, question: str, gold: str
         "chat_template_kwargs": {"enable_thinking": False},
     }
     try:
-        r = await session.post(f"{base_url.rstrip('/')}/v1/chat/completions", json=payload, timeout=120)
+        import os
+
+        key = api_key or os.environ.get("JUDGE_API_KEY")
+        headers = {"Authorization": f"Bearer {key}"} if key else None
+        url = base_url.rstrip("/")
+        url = url + ("/chat/completions" if url.endswith("/v1") else "/v1/chat/completions")
+        r = await session.post(url, json=payload, timeout=120, headers=headers)
         r.raise_for_status()
         out = r.json()["choices"][0]["message"]["content"].strip().upper()
         return out.startswith("YES")

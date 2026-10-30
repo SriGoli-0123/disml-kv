@@ -37,6 +37,7 @@ from aclkv.client import VLLMClient  # noqa: E402
 from aclkv.metrics import latency_summary  # noqa: E402
 from aclkv.pipeline import BuildSettings, build_prompts, load_workload_and_corpus, make_builder  # noqa: E402
 from aclkv.scope import Barrier, encode_cache_salt  # noqa: E402
+from aclkv.policies import get_policy  # noqa: E402
 from aclkv.tokenizer import load_tokenizer  # noqa: E402
 
 
@@ -47,10 +48,12 @@ async def main():
     ap.add_argument("--base-url", default="http://localhost:8000")
     ap.add_argument("--tokenizer", default="Qwen/Qwen2.5-7B-Instruct")
     ap.add_argument("--chat-format", default="qwen2.5")
-    ap.add_argument("--policies", nargs="*", default=["UB", "B3", "B4", "B5"])
+    ap.add_argument("--policies", nargs="*", default=["Global", "PerUser", "ACLScope", "ACLKV", "B3", "B6"])
     ap.add_argument("--n", type=int, default=20, help="victims per policy")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out", default="results/security_probe.json")
+    ap.add_argument("--insider", action="store_true",
+                    help="also probe as a co-authorized colleague going THROUGH the middleware (v2 threat model)")
     args = ap.parse_args()
 
     workload, corpus = load_workload_and_corpus(args.workload, args.corpus)
@@ -92,12 +95,26 @@ async def main():
                         continue
                     r = await client.complete(s, f"probe-{name}-{v.req_id}", v.token_ids, salt, max_tokens=1)
                     row["probes"][name] = {"ttft": r.ttft_s, "cached_tokens": r.cached_tokens, "ok": r.ok, "error": r.error}
+                if args.insider:
+                    # a colleague who may read every document re-asks the question through the middleware
+                    insiders = [u for u in workload.directory.users
+                                if u != v.user and final_acl.allows(u, workload.directory)]
+                    if insiders:
+                        mate = rng.choice(insiders)
+                        req = next(r for r in workload.requests if r.req_id == v.req_id)
+                        pp = builder.build(f"insider-{v.req_id}", mate, req.question, req.retrieved_docs(corpus),
+                                           get_policy(pol), pinned=workload.pinned_docs(corpus))
+                        r = await client.complete(s, pp.req_id, pp.token_ids, pp.cache_salt, max_tokens=1)
+                        tail_start = pp.segments[-1].start
+                        row["probes"]["insider"] = {"ttft": r.ttft_s, "cached_tokens": r.cached_tokens, "ok": r.ok,
+                                                    "error": r.error, "tail_start": tail_start,
+                                                    "hit_question_text": (r.cached_tokens or 0) > tail_start}
                 rows.append(row)
             summ = {
                 "victim_cold_ttft": latency_summary([r["victim_cold_ttft"] for r in rows]),
                 "victim_warm_ttft": latency_summary([r["victim_warm_ttft"] for r in rows]),
             }
-            for name in ("no_salt", "forged", "stolen"):
+            for name in ("no_salt", "forged", "stolen", "insider"):
                 sel = [r["probes"][name] for r in rows if name in r["probes"]]
                 if not sel:
                     continue
@@ -105,10 +122,12 @@ async def main():
                 summ[name] = {"n": len(sel), "attacker_hits": leaks,
                               "cached_tokens_mean": sum((x["cached_tokens"] or 0) for x in sel) / len(sel),
                               "ttft": latency_summary([x["ttft"] for x in sel])}
+                if name == "insider":   # hits on the shared evidence prefix are by design; question text must not hit
+                    summ[name]["question_text_hits"] = sum(1 for x in sel if x.get("hit_question_text"))
             report["policies"][pol] = {"summary": summ, "rows": rows}
             print(f"  victim cold TTFT p50={summ['victim_cold_ttft'].get('p50', float('nan'))*1000:.0f}ms  "
                   f"warm p50={summ['victim_warm_ttft'].get('p50', float('nan'))*1000:.0f}ms")
-            for name in ("no_salt", "forged", "stolen"):
+            for name in ("no_salt", "forged", "stolen", "insider"):
                 if name in summ:
                     x = summ[name]
                     print(f"  attacker[{name:7s}] hits={x['attacker_hits']}/{x['n']}  cached_tokens mean={x['cached_tokens_mean']:.0f}  "
@@ -116,8 +135,10 @@ async def main():
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     json.dump(report, open(args.out, "w"), indent=1)
     print(f"\nwrote {args.out}")
+    from aclkv.policies import get_policy as _gp
     bad = {p: r["summary"] for p, r in report["policies"].items()
-           if p != "UB" and any(r["summary"].get(k, {}).get("attacker_hits", 0) for k in ("no_salt", "forged"))}
+           if _gp(p).secure and (any(r["summary"].get(k, {}).get("attacker_hits", 0) for k in ("no_salt", "forged"))
+                                 or (not _gp(p).legacy and r["summary"].get("insider", {}).get("question_text_hits", 0)))}
     if bad:
         print("SECURITY VIOLATION under scoped policy:", json.dumps(bad, indent=1))
         sys.exit(1)
