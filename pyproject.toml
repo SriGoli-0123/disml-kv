@@ -25,6 +25,7 @@ dependencies = [
 [project.optional-dependencies]
 serve = ["vllm==0.29.0"]
 plot = ["matplotlib>=3.7"]
+semantic = ["sentence-transformers>=2.7"]
 dev = ["pytest>=7", "pytest-asyncio>=0.23", "matplotlib>=3.7"]
 
 # vLLM discovers this in every process (API server + EngineCore) via
