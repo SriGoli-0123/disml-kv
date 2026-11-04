@@ -1,0 +1,73 @@
+policy,prediction,gold,similarity,em
+B6,film director,director,0.853,0
+B3,Sean Payton,Patrick Sean Payton,0.942,0
+B6,Candice Swanepoel,Candice Susan Swanepoel,0.845,0
+B3,film director,director,0.853,0
+B3,Kelly Osbourne,Kelly Lee Osbourne,0.941,0
+B3,Gary Johnson,Gary Earl Johnson,0.911,0
+B6,Bo Welch,"Robert W. ""Bo"" Welch III",0.831,0
+B6,Tony Roche,Anthony Dalton Roche,0.815,0
+B3,Sean Payton,Patrick Sean Payton,0.942,0
+B6,Dave Bautista,David Michael Bautista Jr.,0.857,0
+B3,Stalybridge Celtic,Stalybridge Celtic Football Club,0.886,0
+B6,Kelly Osbourne,Kelly Lee Osbourne,0.941,0
+B3,Tony Roche,Anthony Dalton Roche,0.815,0
+B6,Bo Welch,"Robert W. ""Bo"" Welch III",0.831,0
+B3,Kentucky Fried Chicken,Kentucky Fried Chicken (KFC),0.919,0
+B6,Ronald Reagan,Ronald Wilson Reagan,0.928,0
+B3,1995-2012,1995 to 2012,0.943,0
+B3,7 June 1954,1954,0.862,0
+B6,Kentucky Fried Chicken,Kentucky Fried Chicken (KFC),0.919,0
+B3,Jean Cocteau,Jean Maurice Eugène Clément Cocteau,0.855,0
+B6,Bo Welch,"Robert W. ""Bo"" Welch III",0.831,0
+B3,Columbus Crew SC,Columbus Crew Soccer Club,0.825,0
+B6,Jean Cocteau,Jean Maurice Eugène Clément Cocteau,0.855,0
+B6,Hillary Clinton,Hillary Rodham Clinton,0.817,0
+B3,Washington,"Washington, D.C.",0.802,0
+B3,Dave Bautista,David Michael Bautista Jr.,0.857,0
+B6,Harvard,Harvard University,0.95,0
+B3,Washington,"Washington, D.C.",0.802,0
+B3,film director,director,0.853,0
+B6,7 June 1954,1954,0.862,0
+B6,Jean Cocteau,Jean Maurice Eugène Clément Cocteau,0.855,0
+B6,1948,1 December 1948,0.83,0
+B6,Candice Swanepoel,Candice Susan Swanepoel,0.845,0
+B3,1948,1 December 1948,0.83,0
+B3,Paul Mercurio,Paul Joseph Mercurio,0.891,0
+B3,Bo Welch,"Robert W. ""Bo"" Welch III",0.831,0
+B6,Stalybridge Celtic,Stalybridge Celtic Football Club,0.886,0
+B6,Ronald Reagan,Ronald Wilson Reagan,0.928,0
+B3,Jean Cocteau,Jean Maurice Eugène Clément Cocteau,0.855,0
+B6,Washington,"Washington, D.C.",0.802,0
+B6,cat,black cat,0.785,0
+B3,Lithuania national team,Lithuanian,0.712,0
+B6,England national team,England,0.758,0
+B6,Lithuania national team,Lithuanian,0.712,0
+B3,cat,black cat,0.785,0
+B3,Fulgencio Batista,Fulgencio Batista y Zaldívar,0.711,0
+B6,cat,black cat,0.785,0
+B3,England national team,England,0.758,0
+B6,Lithuania national team,Lithuanian,0.712,0
+B6,Cartoon Cartoons,Cartoon Cartoon Fridays,0.757,0
+B6,District of Columbia,"Washington, D.C.",0.716,0
+B6,England national team,England,0.758,0
+B6,Bill Clinton,Hillary Rodham Clinton,0.73,0
+B3,Kurt Gerstein and Rudolf Höss,Rudolf Höss,0.79,0
+B3,KFC,Kentucky Fried Chicken (KFC),0.744,0
+B3,cat,black cat,0.785,0
+B6,cat,black cat,0.785,0
+B3,cat,black cat,0.785,0
+B3,Big 12 Conference,Big 12,0.777,0
+B6,Big 12 Conference,Big 12,0.777,0
+B3,District of Columbia,"Washington, D.C.",0.716,0
+B3,D.C.,"Washington, D.C.",0.763,0
+B3,Lithuania national team,Lithuanian,0.712,0
+B6,Fulgencio Batista,Fulgencio Batista y Zaldívar,0.711,0
+B6,Big 12 Conference,Big 12,0.777,0
+B3,Lithuania national team,Lithuanian,0.712,0
+B3,England national team,England,0.758,0
+B3,Big 12 Conference,Big 12,0.777,0
+B6,"Coalwood, West Virginia",Coalwood,0.799,0
+B3,Kurt Gerstein and Rudolf Höss,Rudolf Höss,0.79,0
+B6,Kurt Gerstein and Rudolf Höss,Rudolf Höss,0.79,0
+B6,Lithuania national team,Lithuanian,0.712,0
