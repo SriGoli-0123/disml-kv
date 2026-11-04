@@ -22,6 +22,14 @@ def test_identical_after_normalisation_is_one():
     assert s.similarity([("The Pentagon", "Pentagon")])[0] > 0.999
 
 
+def test_exact_match_after_normalisation_is_always_perfect_even_if_raw_embeddings_differ():
+    # raw strings embed far apart (cosine 0.6), but EM accepts them, so similarity must be 1.0
+    enc = StubEncoder({"200000": [1, 0], "200,000": [0.6, 0.8]})
+    s = SemanticScorer(enc, threshold=0.8)
+    assert s.similarity([("200000", "200,000")]) == [1.0]
+    assert s.evaluate([("200000", "200,000")])["sem_match"] == 1.0   # never below EM
+
+
 def test_yes_no_mismatch_is_zero_even_if_embeddings_are_close():
     enc = StubEncoder({"yes": [1, 0], "no": [0.99, 0.1]})
     s = SemanticScorer(enc)

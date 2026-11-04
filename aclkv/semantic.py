@@ -104,6 +104,10 @@ class SemanticScorer:
         for pred, gold in cleaned:
             if not pred or not normalize_answer(pred):
                 sims.append(0.0)
+            elif normalize_answer(pred) == normalize_answer(gold):
+                # identical after normalisation (what EM accepts) is a perfect match; raw-string
+                # embeddings would otherwise penalise punctuation, e.g. "200000" vs "200,000"
+                sims.append(1.0)
             elif (_is_yesno(pred) or _is_yesno(gold)) and normalize_answer(pred) != normalize_answer(gold):
                 sims.append(0.0)
             else:
