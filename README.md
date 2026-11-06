@@ -1,6 +1,6 @@
 # Access-Aware KV-Cache Sharing for Resource-Constrained RAG Serving
 
-CSE 598 (Data-Intensive Systems for ML) project — Vedang Vasant Avaghade, Sri Harshith Goli.
+CSE 598 (Data-Intensive Systems for ML) project — Vedang Vasant Avaghade, Sri Harshith Goli, Rimpa Nandi, Surya Chaitanya Buse.
 
 Multi-user RAG serving reprocesses the same long document prefixes for many users. vLLM's
 prefix cache can reuse that work, but its only isolation primitive is one request-level
@@ -193,7 +193,7 @@ Useful knobs: `MODEL=Qwen/Qwen3-8B CHAT_FORMAT=qwen3` (Qwen3 non-thinking templa
 
 ## 4. What to expect
 
-### 4.1 Baselines and improvements (simulator, real HotpotQA prompts, 20 users / 5 groups / 400 requests)
+### 4.1 Baselines and improvements (simulator, real HotpotQA prompts, 20 users / 5 groups / 400 requests, 5 seeds)
 
 Pre-computed simulator outputs are checked in under [`docs/`](docs/): figures in
 [`docs/plots/`](docs/plots/), the full sweep in [`docs/sim/sim_matrix_summary.csv`](docs/sim/sim_matrix_summary.csv)
@@ -203,7 +203,7 @@ and its tables in [`docs/sim/sim_summary.md`](docs/sim/sim_summary.md).
 ![evictions vs KV budget, default mix](docs/plots/sim_evictions_mix0.50-0.30-0.20_c16.png)
 
 Cached prompt tokens (%) — ACL mix 0.5/0.3/0.2 (chunk level), KV = 2 GiB, concurrency 16,
-Qwen2.5-7B-Instruct tokenization (mean prompt 1.5k–2.1k tokens). Full tables: run step 2.
+Qwen2.5-7B-Instruct tokenization (mean prompt 1.5k–2.1k tokens). The table below shows the cached-token percentages for seed 0, using the default ACL mix, 2 GiB cache, and concurrency of 16. Seed 0 was also used for the live GPU experiments and produced higher cache reuse for B5 and B6 than most other seeds. For example, B5 achieved 29.2%, 41.2%, and 48.1% cached tokens at sharing rates of 25%, 50%, and 75% respectively. However, these results do not represent every workload. Across 5 random seeds, B5 and B6 showed considerable variation, while B1-B4 were more consistent. Thus, we also consider the 5-seed averages and standard deviations when evaluating the overall performance of the caching policies. Full tables: run step 2.
 
 | policy | share 0.00 | share 0.25 | share 0.50 | share 0.75 | adversarial-probe leaks |
 |---|---|---|---|---|---|
@@ -230,10 +230,8 @@ Reading the table:
   B1's reuse in every setting.
 * **Ordering is where the big win is (RQ2/RQ3).** With relevance order, popular documents sit
   at different positions in every prompt, so even global sharing only reaches 6–10%. Broad→
-  narrow ordering alone (B4) barely helps because the *within-class* order still follows the
-  per-request relevance rank. The reuse-aware order (B5) places hot chunks in a canonical
-  order and reaches **29–48% cached tokens** at 25–75% shared-document rate — 8–13× the safe
-  per-user baseline — and cuts evictions from ~48k to ~25k blocks at share 0.75 / 2 GiB.
+  narrow ordering alone (B4) does not help. In our experiments, B4 performed worse than B3 in 33 out of 36 configurations, but the difference was generally small (about 0.2-1.0 points). B4 changes the document order in about 90% of the requests, but this does not lead to more matching prefixes. For example, the number of distinct first documents only changes from 168 under B3 to 163 under B4. A possible reason is that B4 moves documents based on access permissions but still follows the relevance order within each access category. This means that different requests can still start with different documents, making it difficult for the cache to reuse the same prefix. It may also move question-specific documents behind public documents that are not consistently shared across the requests. The reuse-aware order (B5) places hot chunks in a canonical
+  order and reaches **17–33% cached tokens (5-seed mean)** at 25–75% shared-document rate. This is about 3-8 times the safe per-user baseline, but the result depends strongly on the seed (standard deviation: 7-10 points). For seed 0, B5 also reduced the cache evictions from ~48k to ~25k blocks at a 75% sharing rate with a 2GiB cache.
 * **Why B5 rises steeply while the others stay flat.** Prefix caching only reuses an *exact*
   prefix. Under retrieval order the first document after the preamble is question-specific
   (168 distinct first docs in 400 requests) and the hot documents added by `share_rate` are
@@ -245,15 +243,14 @@ Reading the table:
   (B3 reaches 30% only with an unlimited cache; B5 is budget-insensitive: 41 → 42 → 43.5%
   at 2 / 4 / ∞ GiB). Under memory pressure, *where in the prompt* and *how recently* shared
   content appears matters more than how much is shared.
+* **Why B5 and B6 vary across seeds.** The random seed affects more than just the order of the questions. Our workload generator also uses it to select the 64 frequently shared documents, assign their access permissions, and determine their popularity order. This matters because B5 and B6 rely on frequently reused documents to create matching prompt prefixes. Even if two workloads use the same target sharing rate, they may not contain the same amount of content that users are actually allowed to share. For example, if a popular document is restricted and a user does not have the permission to access it, that document is removed from their retrieved evidence. This could explain why B5 and B6 are more sensitive to different seeds than B3 or B4. At 20 users, 1 GiB cache, and a 50% sharing rate, B3 stayed between 5.6% and 7.0% cached tokens across seeds, while B5 ranged from 14.0% to 40.1%.
 * **Ordering does not have to cost quality (RQ2).** B6 keeps every token of B5's reuse while
-  putting each request's best-ranked document immediately before its question — see §5.1.
+  putting each request's best-ranked document immediately before its question — see §5.1. We evaluated the answer quality across all 192 live runs using Exact Match (EM), F1, and embedding-based semantic similarity. The EM/F1 results were 0.527/0.674 for B3, 0.542/0.684 for B4, 0.535/0.674 for B5, and 0.551/0.694 for B6. B4 and B6 have slightly higher scores than B3, which is why we initially described them as performing a little better. However, these differences are small, and the reported 95% confidence intervals include zero. Thus, we cannot conclude that either policy significantly improves the answer quality. A possible explanation is that reordering places some relevant documents closer to the question, making them easier for the model to use when generating the answers. B6 specifically moves the top-ranked retrieved documents towards the end of the prompt. However, we have not confirmed that this positioning caused the score differences. The main finding is that reordering does not show a clear reduction in the answer quality in our experiments. The semantic similarity results support the same conclusion.
 * **Break-even (RQ3).** At share rate 0 there is nothing hot; B5 falls slightly *below* B3
-  (7.9 vs 10.2%) because a repeated question is promoted to canonical order only on its second
-  appearance. Below ~10–15% shared documents plain B3 is the better choice; the simulator
-  sweep locates the crossover for any workload/mix. With the restrictive mix (0.2/0.4/0.4)
-  B5 still reaches 11–22% while B3 stays ≈ 8–9%.
-
+  (7.8 vs 9.6%, 5-seed mean) because a repeated question is promoted to canonical order only on its second
+  appearance. Across all the user counts and KV budgets, B5 and B6 beat B3 in every tested setting at 50% and 75% sharing, lose at 0%, and are mixed at 25%, so the crossover lies between 25% and 50% shared documents. Below it plain B3 is the better choice; the simulator sweep locates the crossover for any workload/mix. With the restrictive mix (0.2/0.4/0.4) B5 still reaches 11–22% (seed 0) while B3 stays ≈ 8–9%.
 ![cached tokens, restrictive mix](docs/plots/sim_cached_mix0.20-0.40-0.40_c16.png)
+* **Effect of increasing the number of users.** We also ran experiments with 20, 50, and 100 users to see how the caching policies behave as the workload grows. B5 and B6 generally showed lower cache reuse as the number of users increased. Their average cached-token percentages dropped from around 21% with 20 users to 18% with 50 users and 15% with 100 users. B1 also showed a decrease at 100 users. Meanwhile, B2, B3, and B4 remained relatively stable. For example, B3 achieved average cached-token percentages of 9.5%, 11.3%, and 10.6% with 20, 50, and 100 users respectively. A possible explanation is that more users introduce more distinct requests competing for the same limited cache space. This may cause cached blocks to be removed before they can be reused. 
 * **Cache pressure.** At 1 GiB (≈18.7k tokens for this model) sixteen 1.6–2k-token requests do
   not fit, so effective concurrency drops (`stalls` in the CSV, `preemptions`/waiting requests
   on the live server); reuse still helps because fewer blocks are recomputed, but absolute
@@ -269,9 +266,7 @@ Reading the table:
 * **`cached_tokens`** from the usage payload should match the simulator's `cached_pct` within
   a few percent (concurrent arrivals and vLLM's chunked prefill cause small differences).
 * **QA quality** (EM/F1 on HotpotQA, `contains`, optional LLM judge): B0–B3 are identical
-  prompts in different namespaces and must give identical answers at temperature 0. B4/B5
-  reorder evidence; the expected effect is within ~1–2 F1 points, and `--max-shift 2` bounds
-  any drop at a small cost in reuse — report both.
+  prompts in different namespaces and must give identical answers at temperature 0 (measured: fewer than 1% of answers differ, from GPU nondeterminism). B4/B5 reorder evidence; the measured effect is within about 1-2 points of EM/F1 and not significant (see §4.1), and `--max-shift 2` bounds any drop at a small cost in reuse.
 * **Preemptions / waiting** at 1 GiB are the price of the budget; compare across policies at
   the same budget.
 
@@ -322,6 +317,7 @@ This is a *placement* proxy for quality, not a quality measurement — EM/F1 und
 still needs the A100 run (`--max-shift` and `--anchor-k` ablations are scripted in §3.3).
 
 
+* **Why we chose a semantic similarity threshold of 0.8.** We used 0.8 as an initial threshold because we wanted to recognize answers that have similar meanings even when they use different wordings. We also tested a stricter threshold of 0.9 to see how much the results depended on this choice. With a threshold of 0.8, approximately 15% of answers rejected by EM were accepted by the semantic metric. At 0.9, this dropped to approximately 6%. We manually checked some of the answer pairs and found that 0.8 correctly accepted several shortened names and alternate wordings. However, it could also accept answers that were similar in meaning but incomplete or factually incorrect. For this reason, we do not treat 0.8 as a fully validated measure of correctness. Instead, we use it as an additional quality check alongside EM and F1. The main comparisons between the caching policies remained similar at both thresholds, which suggests that our overall conclusions do not depend heavily on the chosen cutoff.
 * **Threat model.** The middleware is the trusted layer (as in vLLM's `cache_salt` design):
   it filters documents, derives scope ids with a secret key and never issues a scope id the
   requester is not authorized for. Scoped hashing is defence in depth at the engine: an
