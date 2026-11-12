@@ -114,16 +114,19 @@ class PrefixTree:
             old, u = self._recent.popleft()
             self._update(old, u, -1)
 
-    def walk(self, docs: Sequence["RetrievedDoc"], score, eligible=None) -> tuple[list["RetrievedDoc"], list["RetrievedDoc"]]:
+    def walk(self, docs: Sequence["RetrievedDoc"], score, eligible=None,
+             node_ok=None) -> tuple[list["RetrievedDoc"], list["RetrievedDoc"]]:
         """Greedy walk: repeatedly take the child (among ``docs``) with the
         highest ``score(node, doc)``; stop when no child matches.  Returns
-        (head, remaining)."""
+        (head, remaining).  ``eligible(head, doc)`` filters documents and
+        ``node_ok(child)`` filters tree nodes."""
         node = self.root
         remaining = list(docs)
         head: list[RetrievedDoc] = []
         while remaining:
             cands = [(d, node.children[d.chunk_id]) for d in remaining
-                     if d.chunk_id in node.children and (eligible is None or eligible(head, d))]
+                     if d.chunk_id in node.children and (eligible is None or eligible(head, d))
+                     and (node_ok is None or node_ok(node.children[d.chunk_id]))]
             if not cands:
                 break
             d, child = max(cands, key=lambda dc: (score(dc[1], dc[0]), -dc[0].rank))
@@ -225,33 +228,70 @@ def apply_relevance_anchor(docs: Sequence[RetrievedDoc], anchor_k: int) -> list[
     return head + sorted(anchored, key=lambda d: -d.rank)
 
 
+def order_exposure(tree: PrefixTree, head: Sequence[RetrievedDoc], out: Sequence[RetrievedDoc],
+                   user: str | None) -> int | None:
+    """Order channel audit.  If a user can see the order of the evidence (for
+    example numbered sources), a cache-aware order tells them that *other*
+    users recently requested the prefix the walk followed.  Returns the number
+    of other users behind the deepest tree node at which ``out`` departs from
+    retrieval order (the anonymity set of what the order reveals), or ``None``
+    if the order is plain retrieval order.  Must be called before the current
+    request is added to the tree."""
+    ranked = sorted(out, key=lambda d: d.rank)
+    diff = [i for i, (a, b) in enumerate(zip(out, ranked)) if a.chunk_id != b.chunk_id]
+    if not diff or not head:
+        return None
+    depth = min(diff[-1], len(head) - 1)
+    node = tree.root
+    for d in head[:depth + 1]:
+        node = node.children[d.chunk_id]
+    return len(set(node.users) - {user})
+
+
 def order_tree(docs: Sequence[RetrievedDoc], tree: PrefixTree, kanon: int = 1, audience_size=None,
-               privacy_aware: bool = False) -> list[RetrievedDoc]:
+               privacy_aware: bool = False, user: str | None = None, gate_k: int = 1,
+               audit: dict | None = None) -> list[RetrievedDoc]:
     """Cache-aware ordering (CacheWeaver-style): follow the most frequently
     served prefix, then retrieval order.
 
-    ``privacy_aware=True`` is the ablation in which the walk prefers prefixes
-    already requested by >= ``kanon`` distinct users and never extends the
-    prefix to an effective ACL whose audience is smaller than ``kanon`` (such
-    a prefix can never be promoted).  It did not change reuse on our
-    development workload, so ACLKV uses the plain walk.
+    ``gate_k > 1`` is the **k-gated walk** used by ACLKV: the walk only enters
+    a tree node that at least ``gate_k`` distinct users (counting the
+    requester) have traversed.  The visible order then reveals no more than a
+    k-anonymous cache hit does.  The plain walk (``gate_k=1``) can follow a
+    prefix that a single colleague requested, so the order itself singles that
+    colleague out.
+
+    ``privacy_aware=True`` is an older ablation in which the walk *prefers*
+    prefixes already requested by >= ``kanon`` distinct users and never
+    extends the prefix to an effective ACL whose audience is smaller than
+    ``kanon``.  It does not close the order channel (it still falls back to
+    nodes with fewer users).
+
+    ``audit`` (a dict) receives ``order_anon`` (see ``order_exposure``).
     """
+    def enough_users(child) -> bool:
+        return len(child.users) + (0 if user in child.users else 1) >= gate_k
+
+    node_ok = enough_users if gate_k > 1 else None
     if not privacy_aware:
-        head, rest = tree.walk(docs, score=lambda node, d: node.n)
-        return head + sorted(rest, key=lambda d: d.rank)
-    from .acl import PUBLIC
+        head, rest = tree.walk(docs, score=lambda node, d: node.n, node_ok=node_ok)
+    else:
+        from .acl import PUBLIC
 
-    def eligible(head, d):
-        if kanon <= 1 or audience_size is None:
-            return True
-        a = PUBLIC
-        for x in head:
-            a = a.intersect(x.acl)
-        return audience_size(a.intersect(d.acl)) >= kanon
+        def eligible(head, d):
+            if kanon <= 1 or audience_size is None:
+                return True
+            a = PUBLIC
+            for x in head:
+                a = a.intersect(x.acl)
+            return audience_size(a.intersect(d.acl)) >= kanon
 
-    head, rest = tree.walk(docs, score=lambda node, d: (len(node.users) >= kanon, len(node.users), node.n),
-                           eligible=eligible)
-    return head + sorted(rest, key=lambda d: d.rank)
+        head, rest = tree.walk(docs, score=lambda node, d: (len(node.users) >= kanon, len(node.users), node.n),
+                               eligible=eligible, node_ok=node_ok)
+    out = head + sorted(rest, key=lambda d: d.rank)
+    if audit is not None:
+        audit["order_anon"] = order_exposure(tree, head, out, user)
+    return out
 
 
 def order_lcr(docs: Sequence[RetrievedDoc]) -> list[RetrievedDoc]:
@@ -344,7 +384,10 @@ def order_layout(
     return head + cold
 
 
-ORDERINGS = ("retrieval", "acl_aware", "reuse_aware", "tree", "tree_k", "lcr", "layout", "layout_noacl")
+ORDERINGS = ("retrieval", "acl_aware", "reuse_aware", "tree", "ktree", "tree_k", "lcr", "layout", "layout_noacl",
+             "catalog")
+# orderings whose output depends only on the request and its ACLs (nothing to audit)
+_STATIC_ORDERINGS = ("retrieval", "acl_aware", "lcr")
 
 
 def apply_ordering(
@@ -357,9 +400,17 @@ def apply_ordering(
     tree: PrefixTree | None = None,
     audience_size=None,
     kanon: int = 1,
+    user: str | None = None,
+    catalog=None,
+    audit: dict | None = None,
 ) -> list[RetrievedDoc]:
+    """``audit`` (a dict), if given, receives ``order_anon``: the anonymity set
+    of what the order reveals about other users (``None``: nothing).  It is
+    left unset for orderings that are not audited (popularity-based ones)."""
     popularity = popularity if popularity is not None else PopularityTracker()
     tree = tree if tree is not None else PrefixTree()
+    if audit is not None and name in _STATIC_ORDERINGS:
+        audit["order_anon"] = None
     if name == "retrieval":
         out = order_retrieval(docs)
     elif name == "acl_aware":
@@ -367,14 +418,21 @@ def apply_ordering(
     elif name == "reuse_aware":
         out = order_reuse_aware(docs, popularity, min_pop=min_pop, max_shift=max_shift)
     elif name == "tree":
-        out = order_tree(docs, tree)
+        out = order_tree(docs, tree, user=user, audit=audit)
+    elif name == "ktree":
+        out = order_tree(docs, tree, user=user, gate_k=kanon, audit=audit)
     elif name == "tree_k":
-        out = order_tree(docs, tree, kanon=kanon, audience_size=audience_size, privacy_aware=True)
+        out = order_tree(docs, tree, kanon=kanon, audience_size=audience_size, privacy_aware=True, user=user,
+                         audit=audit)
     elif name == "lcr":
         out = order_lcr(docs)
     elif name in ("layout", "layout_noacl"):
         out = order_layout(docs, tree, popularity, audience_size or (lambda a: 10 ** 9), kanon=kanon,
                            min_pop=min_pop, acl_grouping=(name == "layout"))
+    elif name == "catalog":
+        if catalog is None:
+            raise ValueError("ordering 'catalog' needs an EvidenceCatalog (OrderingConfig.catalog)")
+        out = catalog.order(docs, user=user, audit=audit)
     else:
         raise ValueError(f"unknown ordering {name!r}")
     return apply_relevance_anchor(out, anchor_k)
@@ -389,3 +447,4 @@ class OrderingConfig:
     popularity: PopularityTracker = field(default_factory=PopularityTracker)
     tree: PrefixTree = field(default_factory=PrefixTree)
     promotion: object = None          # privacy.PromotionTracker, created per run when kanon > 1
+    catalog: object = None            # catalog.EvidenceCatalog for the "catalog" ordering

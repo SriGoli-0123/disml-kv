@@ -2,7 +2,9 @@
 """Summarise the v2 live runs (results/v2_live/<model>_kv<gib>/{closed,open,quality}).
 
 * closed loop: TTFT p50/p95, req/s, cached % per (model, KV, workload, policy)
-* open loop:   TTFT vs arrival rate, SLO attainment and goodput
+* open loop:   TTFT vs arrival rate, SLO attainment and goodput, and goodput
+               per GiB of KV cache and per GiB of total model memory
+               (weights + KV; the low-resource metric)
 * quality:     paired, question-clustered comparisons against ACLScope
                (retrieval order) on EM / F1 / LLM-judge accuracy
 
@@ -17,6 +19,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from aclkv.model_info import weights_gib  # noqa: E402
 from aclkv.qa_eval import score_one  # noqa: E402
 from aclkv.stats import cluster_bootstrap, paired_report  # noqa: E402
 
@@ -33,6 +36,16 @@ def load(pattern):
             d["_file"] = f
             out.append(d)
     return out
+
+
+def per_gib(goodput, model: str, kv) -> dict:
+    """Requests served within the TTFT SLO per second, per GiB of KV cache and
+    per GiB of weights + KV cache (None when unknown)."""
+    if goodput is None or kv in (None, 0):
+        return {"goodput_per_kv_gib": None, "goodput_per_total_gib": None, "weights_gib": weights_gib(model)}
+    w = weights_gib(model)
+    return {"goodput_per_kv_gib": goodput / float(kv),
+            "goodput_per_total_gib": None if w is None else goodput / (w + float(kv)), "weights_gib": w}
 
 
 def cell(d):
@@ -60,6 +73,7 @@ def main():
         out["open"].append({"model": m, "kv": kv, "workload": wl, "policy": d["policy"]["name"], "rate": d["args"]["rate"],
                             "ttft_p50_ms": s["ttft"]["p50"] * 1000, "ttft_p95_ms": s["ttft"]["p95"] * 1000,
                             "slo_attained": gp.get("attained"), "goodput_req_per_s": gp.get("goodput_req_per_s"),
+                            **per_gib(gp.get("goodput_req_per_s"), d["server"]["model"], kv),
                             "cached_pct": s["cached_pct"]})
     q = defaultdict(dict)
     for d in load(f"{args.root}/*/quality/*.json"):

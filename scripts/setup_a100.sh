@@ -38,4 +38,4 @@ python scripts/prepare_data.py --dataset hotpotqa --max-questions 0 --out-dir da
 python scripts/prepare_data.py --dataset musique --max-questions 0
 python scripts/gen_workloads_v2.py
 python scripts/make_manifest.py
-echo "setup complete. v2 GPU matrix: sbatch --array=0-7 scripts/sol_array.sbatch   (see README section 3)"
+echo "setup complete. v2 GPU matrix: sbatch --array=0-13 scripts/sol_array.sbatch   (see README section 3)"

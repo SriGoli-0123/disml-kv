@@ -12,7 +12,9 @@ Two attackers are modelled:
   reports the ground truth).
 
 A hit is **informative** if the block was computed or reused by some other
-user and never by the attacker.  Hits on the system preamble and pinned
+user and never by the attacker.  For the hard-pinned evidence catalog a hit
+on a published block happens whoever asked since publication, so its
+anonymity set is the set of users whose requests got the prefix published.  Hits on the system preamble and pinned
 documents are excluded (everyone requests them).  For every informative hit we
 compute the **anonymity set**: the distinct users other than the attacker who
 had requested that exact evidence prefix (or, for the question tail, that
@@ -26,17 +28,26 @@ most revealing hit has an anonymity set of exactly one other user
 ("singled out") or fewer than 3 / 5; fraction that hit the victim's question
 text; and the utility of the same trace (cached prompt tokens of honest
 requests).
+
+The **order channel** is reported separately: if users can see the order of
+their sources, a cache-aware order reveals that other users requested the
+prefix it follows (``ordering.order_exposure``).  For every honest request we
+take the anonymity set of what its order reveals; ``order_singled_out`` is the
+fraction of requests whose order points at exactly one other user.  The order
+metrics are NaN for orderings that are not audited (popularity-based v1
+orderings).
 """
 
 from __future__ import annotations
 
+import math
 import random
 from collections import defaultdict
 from dataclasses import asdict, dataclass
 
+from .catalog import CatalogConfig
 from .data_prep import Chunk
-from .ordering import OrderingConfig, PopularityTracker, PrefixTree
-from .pipeline import BuildSettings
+from .pipeline import BuildSettings, make_ordering_state
 from .policies import Policy, get_policy
 from .simulator import PrefixCacheSimulator
 from .workload import Workload
@@ -58,6 +69,11 @@ class AttackSummary:
     bypass_probes: int
     honest_cached_pct: float
     honest_requests: int
+    order_revealed: float = math.nan       # P(an honest request's order reveals >= 1 other user)
+    order_singled_out: float = math.nan    # P(... exactly one other user)
+    order_anon_lt3: float = math.nan       # P(... 1 or 2 other users)
+    order_min_anon: int = -1               # smallest non-empty order anonymity set (-1: none)
+    publish_pct: float = 0.0               # catalog publisher prefill, % of honest prompt tokens
 
     def to_json(self) -> dict:
         return asdict(self)
@@ -72,14 +88,13 @@ def _seg_key(prompt, seg) -> str:
 def run_attack_trace(workload: Workload, corpus: dict[str, Chunk], policy: Policy | str, builder,
                      settings: BuildSettings, num_blocks: int, block_size: int = 16, max_concurrency: int = 16,
                      output_tokens: int = 48, probe_rate: float = 0.2, bypass_rate: float = 0.1,
-                     seed: int = 0, mode: str = "prefix", pic_scoping: str = "acl") -> AttackSummary:
+                     seed: int = 0, mode: str = "prefix", pic_scoping: str = "acl", eviction: str = "lru",
+                     catalog: CatalogConfig | None = None) -> AttackSummary:
     pol = get_policy(policy) if isinstance(policy, str) else policy
-    state = OrderingConfig(name=pol.ordering, max_shift=settings.max_shift, min_pop=settings.min_pop,
-                           anchor_k=settings.anchor_k, popularity=PopularityTracker(settings.popularity_decay),
-                           tree=PrefixTree(settings.tree_window))
     pinned = workload.pinned_docs(corpus)
+    state = make_ordering_state(pol, settings, pinned, catalog, num_blocks, output_tokens)
     sim = PrefixCacheSimulator(num_blocks, workload.directory, block_size, max_concurrency, output_tokens,
-                               mode=mode, pic_scoping=pic_scoping)
+                               mode=mode, pic_scoping=pic_scoping, eviction=eviction)
     rng = random.Random(seed)
     requesters: dict[str, set[str]] = defaultdict(set)
     users = list(workload.directory.users)
@@ -89,6 +104,8 @@ def run_attack_trace(workload: Workload, corpus: dict[str, Chunk], policy: Polic
     min_anon_seen = None
     bypass_hits = bypass_probes = 0
     honest_pt = honest_ct = 0
+    order_sets: list = []
+    order_audited = True
 
     def log(prompt, user):
         for seg in prompt.segments:
@@ -97,8 +114,21 @@ def run_attack_trace(workload: Workload, corpus: dict[str, Chunk], policy: Polic
 
     for r in workload.requests:
         docs = r.retrieved_docs(corpus)
+        if state.catalog is not None:
+            event = state.catalog.maybe_publish(builder, pol, state, pinned)
+            if event is not None:
+                sim.apply_publish(event)
+                if event["mode"] == "hard":
+                    # a hit on a hard-pinned block happens whoever asked since publication: it
+                    # reveals only the users whose window requests got the prefix published
+                    for key, us in state.catalog.published_anonymity().items():
+                        requesters[key] |= us
         p = builder.build(r.req_id, r.user, r.question, docs, pol, ordering=state, pinned=pinned)
         p.meta.update({"qid": r.qid})
+        if "order_anon" in p.meta:
+            order_sets.append(p.meta["order_anon"])
+        else:
+            order_audited = False
         rec = sim.process(p)
         honest_pt += rec.prompt_tokens
         honest_ct += rec.cached_tokens
@@ -146,6 +176,14 @@ def run_attack_trace(workload: Workload, corpus: dict[str, Chunk], policy: Polic
         log(q, attacker)
 
     n = max(1, probes)
+    revealing = [a for a in order_sets if a is not None and a >= 1]
+    m = max(1, len(order_sets))
+    order = dict(
+        order_revealed=len(revealing) / m if order_audited else math.nan,
+        order_singled_out=sum(a == 1 for a in revealing) / m if order_audited else math.nan,
+        order_anon_lt3=sum(a < 3 for a in revealing) / m if order_audited else math.nan,
+        order_min_anon=min(revealing) if (order_audited and revealing) else -1,
+    )
     return AttackSummary(
         policy=pol.name, probes=probes, skipped_no_insider=skipped,
         revealed=revealed / n, singled_out=singled / n, anon_lt3=lt3 / n, anon_lt5=lt5 / n,
@@ -153,4 +191,5 @@ def run_attack_trace(workload: Workload, corpus: dict[str, Chunk], policy: Polic
         min_anon_observed=-1 if min_anon_seen is None else min_anon_seen,
         bypass_hits=bypass_hits, bypass_probes=bypass_probes,
         honest_cached_pct=100.0 * honest_ct / max(1, honest_pt), honest_requests=len(workload.requests),
+        publish_pct=100.0 * sim.publish_tokens / max(1, honest_pt), **order,
     )

@@ -19,6 +19,7 @@ from dataclasses import dataclass, field
 from typing import Sequence
 
 from .acl import ACL, PUBLIC, Directory, authorization_filter
+from .catalog import CatalogConfig, EvidenceCatalog
 from .ordering import OrderingConfig, RetrievedDoc, apply_ordering
 from .policies import Policy, SegmentScope, plan_scopes
 from .privacy import PromotionTracker
@@ -217,12 +218,18 @@ class ContextBuilder:
         pinned_kept, pinned_dropped = authorization_filter(pinned, user, self.directory)
         # 3. context builder: ordering
         anchor_k = policy.anchor_k or ordering.anchor_k
-        if policy.kanon > 1 and ordering.promotion is None:
+        if policy.ordering == "catalog":
+            if ordering.catalog is None:               # default publisher (no KV budget known here)
+                ordering.catalog = EvidenceCatalog(CatalogConfig(), k=policy.kanon, block_size=self.block_size)
+            ordering.promotion = ordering.catalog      # shared scope == published catalog
+        elif policy.kanon > 1 and ordering.promotion is None:
             ordering.promotion = PromotionTracker(policy.kanon)
+        audit: dict = {}
         ordered = apply_ordering(policy.ordering, kept, popularity=ordering.popularity,
                                  min_pop=ordering.min_pop, max_shift=ordering.max_shift,
                                  anchor_k=anchor_k, tree=ordering.tree,
-                                 audience_size=self._audience_size, kanon=policy.kanon)
+                                 audience_size=self._audience_size, kanon=policy.kanon,
+                                 user=user, catalog=ordering.catalog, audit=audit)
         full = list(pinned_kept) + ordered
         # 2. prefix ACL propagation + 4. scope plan (+ private tail, k-anonymous promotion)
         scopes: list[SegmentScope] = plan_scopes(
@@ -232,6 +239,8 @@ class ContextBuilder:
         if observe:
             ordering.popularity.observe([d.chunk_id for d in ordered])
             ordering.tree.observe([d.chunk_id for d in ordered], user)
+            if ordering.catalog is not None:
+                ordering.catalog.record(user, kept)
 
         texts: list[tuple[str, str, str | None]] = []   # (name, text, chunk_id)
         texts.append(("preamble", self.fmt.preamble.format(system=self.system, instructions=self.instructions), None))
@@ -269,6 +278,8 @@ class ContextBuilder:
             if sc.scope_id is not None:
                 prev_scope = sc.scope_id
 
+        if observe and ordering.catalog is not None:
+            ordering.catalog.note_prompt(len(token_ids))
         cache_salt = encode_cache_salt(barriers) if (self.scope_mode == "hash" and barriers) else None
         n_shared_docs = sum(1 for seg in segments if seg.name in ("doc", "pinned") and seg.shared)
         return BuiltPrompt(
@@ -283,7 +294,8 @@ class ContextBuilder:
             policy=policy.name,
             meta={"ordering": policy.ordering, "caching": policy.caching, "n_docs": len(ordered),
                   "anchor_k": anchor_k, "kanon": policy.kanon, "tail_scope": policy.tail_scope,
-                  "n_pinned": len(pinned_kept), "n_shared_docs": n_shared_docs},
+                  "n_pinned": len(pinned_kept), "n_shared_docs": n_shared_docs,
+                  **({"order_anon": audit["order_anon"]} if "order_anon" in audit else {})},
         )
 
     def render_text(self, prompt: BuiltPrompt) -> str:

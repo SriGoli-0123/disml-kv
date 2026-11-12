@@ -17,6 +17,12 @@ Modelled after ``vllm/v1/core/{block_pool,kv_cache_manager}.py`` (v0.29.0):
 Concurrency is modelled as a sliding window of ``max_concurrency`` in-flight
 requests, each holding its prompt + ``output_tokens`` blocks until retired.
 
+``eviction`` selects which free cached block is evicted.  ``"lru"`` is vLLM's
+behaviour (the default; all published results use it).  ``"lfu"``, ``"gdsf"``
+and ``"arc"`` are frequency-aware baselines (see ``_PriorityFreeQueue`` and
+``_ARCFreeQueue``); vLLM 0.29 cannot run them, so they are simulator-only.
+``set_pinned`` keeps a set of blocks resident (the published evidence catalog).
+
 On top of the vLLM model the simulator keeps, for every cached block, the
 **ground-truth effective ACL** of the prefix it ends, and audits each hit
 against the requester (the cache-hit gate).  Under a secure policy the number
@@ -26,6 +32,7 @@ of unauthorized hits must be exactly zero.
 from __future__ import annotations
 
 import hashlib
+import heapq
 import math
 import random
 from collections import OrderedDict, deque
@@ -44,6 +51,22 @@ def _hash(parent: bytes | None, tokens: tuple[int, ...], extra: tuple | None) ->
     return h.digest()
 
 
+def prompt_block_hashes(prompt: BuiltPrompt, block_size: int = 16) -> list[bytes]:
+    """Chained hashes of the prompt's full blocks, with scope barriers as extra keys."""
+    barriers = tuple((b.token_offset, b.scope_id) for b in prompt.barriers)
+    out: list[bytes] = []
+    parent: bytes | None = None
+    ids = prompt.token_ids
+    for i in range(len(ids) // block_size):
+        s, e = i * block_size, (i + 1) * block_size
+        keys = scope_keys_for_block(barriers, s, e)
+        extra = tuple(keys) if keys else None
+        h = _hash(parent, tuple(ids[s:e]), extra)
+        out.append(h)
+        parent = h
+    return out
+
+
 class _Block:
     __slots__ = ("bid", "hash", "ref_cnt", "acl", "from_probe", "contributors")
 
@@ -57,30 +80,240 @@ class _Block:
 
 
 class _FreeQueue:
-    """Eviction-ordered free list (head == evict first) with O(1) remove."""
+    """Eviction-ordered free list (head == evict first) with O(1) remove.
+
+    ``protect`` adds a second class of *protected* cached blocks (the soft-
+    pinned evidence catalog) that is evicted only once no other free block is
+    left.  Without it the queue is exactly vLLM's LRU free list."""
 
     def __init__(self, bids):
         self._od: OrderedDict[int, None] = OrderedDict((b, None) for b in bids)
+        self._pod: OrderedDict[int, None] | None = None
+        self._protected: set = set()
+        self._blocks = None
 
     def __len__(self):
-        return len(self._od)
+        return len(self._od) + (len(self._pod) if self._pod is not None else 0)
 
     def __contains__(self, bid):
-        return bid in self._od
+        return bid in self._od or (self._pod is not None and bid in self._pod)
 
     def popleft(self) -> int:
+        if self._pod is not None and not self._od:
+            bid, _ = self._pod.popitem(last=False)
+            return bid
         bid, _ = self._od.popitem(last=False)
         return bid
 
     def remove(self, bid: int) -> None:
-        del self._od[bid]
+        if self._pod is not None and bid in self._pod:
+            del self._pod[bid]
+        else:
+            del self._od[bid]
 
     def append(self, bid: int) -> None:
-        self._od[bid] = None
+        if self._pod is not None and self._blocks[bid].hash in self._protected:
+            self._pod[bid] = None
+        else:
+            self._od[bid] = None
+
+    def protect(self, hashes, blocks) -> None:
+        """Replace the protected set; free blocks change class in place (LRU order kept)."""
+        self._protected = set(hashes)
+        self._blocks = blocks
+        if self._pod is None:
+            self._pod = OrderedDict()
+        moved = [b for b in self._od if blocks[b].hash is not None and blocks[b].hash in self._protected]
+        for b in moved:
+            del self._od[b]
+            self._pod[b] = None
+        back = [b for b in self._pod if blocks[b].hash not in self._protected]
+        for b in back:
+            del self._pod[b]
+            self._od[b] = None
 
     def prepend(self, bid: int) -> None:
         self._od[bid] = None
         self._od.move_to_end(bid, last=False)
+
+    # access hooks (LRU needs none: its order is the order in which blocks are freed)
+    def on_insert(self, bid: int) -> None:
+        pass
+
+    def on_hit(self, bid: int) -> None:
+        pass
+
+
+class _PriorityFreeQueue:
+    """Frequency-aware eviction over the free blocks.
+
+    Empty (never-cached) blocks are always used first, as in vLLM.  Among free
+    cached blocks the one with the smallest priority is evicted; ties go to
+    the block freed earliest, and since a finished request frees its blocks
+    tail-first, a child block is always evicted before its parent.
+
+    * ``lfu``:  priority = number of requests that used the block since it
+      was cached (classic in-cache LFU; the count restarts after eviction).
+    * ``gdsf``: Greedy-Dual-Size-Frequency as in RAGCache's PGDSF,
+      priority = L + frequency * cost / size, where L is the priority of the
+      last evicted block (aging).  Every block has the same size (one block)
+      and we use the same recompute cost for every block: on our live A100
+      runs time-to-first-token is linear in recomputed tokens (R^2 = 0.998),
+      so a block's recompute cost hardly depends on its position.
+    """
+
+    def __init__(self, bids, kind: str):
+        if kind not in ("lfu", "gdsf"):
+            raise ValueError(kind)
+        self.kind = kind
+        self._empty: OrderedDict[int, None] = OrderedDict((b, None) for b in bids)
+        self._heap: list[tuple[float, int, int]] = []
+        self._entry: dict[int, int] = {}     # free cached block -> sequence number of its live heap entry
+        self._seq = 0
+        self._freq: dict[int, int] = {}
+        self._prio: dict[int, float] = {}
+        self.clock = 0.0                     # GDSF's L
+
+    def __len__(self):
+        return len(self._empty) + len(self._entry)
+
+    def __contains__(self, bid):
+        return bid in self._empty or bid in self._entry
+
+    def popleft(self) -> int:
+        if self._empty:
+            bid, _ = self._empty.popitem(last=False)
+            return bid
+        while True:
+            prio, seq, bid = heapq.heappop(self._heap)
+            if self._entry.get(bid) == seq:
+                break
+        del self._entry[bid]
+        if self.kind == "gdsf":
+            self.clock = prio
+        self._freq.pop(bid, None)
+        self._prio.pop(bid, None)
+        return bid
+
+    def remove(self, bid: int) -> None:
+        if bid in self._empty:
+            del self._empty[bid]
+        else:
+            del self._entry[bid]
+
+    def append(self, bid: int) -> None:          # a cached block became free
+        self._seq += 1
+        self._entry[bid] = self._seq
+        key = self._freq.get(bid, 1) if self.kind == "lfu" else self._prio.get(bid, self.clock + 1.0)
+        heapq.heappush(self._heap, (key, self._seq, bid))
+
+    def prepend(self, bid: int) -> None:         # an empty block became free
+        self._empty[bid] = None
+        self._empty.move_to_end(bid, last=False)
+
+    def on_insert(self, bid: int) -> None:
+        self._freq[bid] = 1
+        self._prio[bid] = self.clock + 1.0
+
+    def on_hit(self, bid: int) -> None:
+        self._freq[bid] = self._freq.get(bid, 0) + 1
+        self._prio[bid] = self.clock + self._freq[bid]
+
+
+class _ARCFreeQueue:
+    """Adaptive Replacement Cache (Megiddo & Modha, FAST'03) on the block pool.
+
+    Cached blocks are in T1 (used by one request since they were cached) or T2
+    (used by two or more).  Evicted hashes are remembered in ghost lists B1/B2
+    (at most ``capacity`` entries each).  Recomputing a hash found in B1 grows
+    the target size ``p`` of T1, one found in B2 shrinks it, and either way
+    the block re-enters T2.  The victim is the least recently freed free block
+    of T1 if |T1| > p (or T2 has no free block), else of T2.  Only free
+    blocks can be evicted, and recency inside each list is the order in which
+    blocks were freed (as in vLLM's LRU).  The REPLACE rule's tie case
+    (x in B2 and |T1| == p) is omitted because the victim is chosen before the
+    incoming block is known.
+    """
+
+    def __init__(self, bids, blocks, capacity: int):
+        self.blocks = blocks
+        self.c = capacity
+        self.p = 0.0
+        self._empty: OrderedDict[int, None] = OrderedDict((b, None) for b in bids)
+        self._free = {1: OrderedDict(), 2: OrderedDict()}
+        self._list: dict[int, int] = {}          # cached block -> 1 | 2
+        self._size = {1: 0, 2: 0}
+        self._ghost = {1: OrderedDict(), 2: OrderedDict()}
+
+    def __len__(self):
+        return len(self._empty) + len(self._free[1]) + len(self._free[2])
+
+    def __contains__(self, bid):
+        return bid in self._empty or bid in self._free[1] or bid in self._free[2]
+
+    def popleft(self) -> int:
+        if self._empty:
+            bid, _ = self._empty.popitem(last=False)
+            return bid
+        lst = 1 if (self._free[1] and (self._size[1] > self.p or not self._free[2])) else 2
+        bid, _ = self._free[lst].popitem(last=False)
+        g = self._ghost[lst]
+        h = self.blocks[bid].hash
+        g[h] = None
+        g.move_to_end(h)
+        if len(g) > self.c:
+            g.popitem(last=False)
+        del self._list[bid]
+        self._size[lst] -= 1
+        return bid
+
+    def remove(self, bid: int) -> None:
+        if bid in self._empty:
+            del self._empty[bid]
+        else:
+            del self._free[self._list[bid]][bid]
+
+    def append(self, bid: int) -> None:
+        self._free[self._list[bid]][bid] = None
+
+    def prepend(self, bid: int) -> None:
+        self._empty[bid] = None
+        self._empty.move_to_end(bid, last=False)
+
+    def on_insert(self, bid: int) -> None:
+        h = self.blocks[bid].hash
+        g1, g2 = self._ghost[1], self._ghost[2]
+        if h in g1:
+            self.p = min(float(self.c), self.p + max(len(g2) / len(g1), 1.0))
+            del g1[h]
+            lst = 2
+        elif h in g2:
+            self.p = max(0.0, self.p - max(len(g1) / len(g2), 1.0))
+            del g2[h]
+            lst = 2
+        else:
+            lst = 1
+        self._list[bid] = lst
+        self._size[lst] += 1
+
+    def on_hit(self, bid: int) -> None:
+        if self._list.get(bid) == 1:
+            self._list[bid] = 2
+            self._size[1] -= 1
+            self._size[2] += 1
+
+
+EVICTION_POLICIES = ("lru", "lfu", "gdsf", "arc")
+
+
+def _make_free_queue(eviction: str, num_blocks: int, blocks):
+    if eviction == "lru":
+        return _FreeQueue(range(num_blocks))
+    if eviction in ("lfu", "gdsf"):
+        return _PriorityFreeQueue(range(num_blocks), eviction)
+    if eviction == "arc":
+        return _ARCFreeQueue(range(num_blocks), blocks, num_blocks)
+    raise ValueError(f"unknown eviction policy {eviction!r}; known: {EVICTION_POLICIES}")
 
 
 @dataclass
@@ -101,6 +334,7 @@ class SimRecord:
     probe: bool = False
     informative_positions: list = field(default_factory=list)   # hit block indices computed by *other* users
     honest_hit_blocks: int = 0      # hits on blocks computed by honest (non-probe) requests
+    inflight: int = 0               # other requests still holding KV when this one was admitted
 
     @property
     def recomputed_tokens(self) -> int:
@@ -130,6 +364,11 @@ class SimSummary:
     probe_unauthorized_hits: int = 0      # must be 0 for every secure policy
     probe_cached_tokens: int = 0
     mode: str = "prefix"
+    eviction: str = "lru"
+    mean_inflight: float = 0.0            # mean requests holding KV at admission (memory-limited concurrency)
+    publish_tokens: int = 0               # tokens prefilled by the catalog publisher (not by requests)
+    publishes: int = 0
+    max_pinned_blocks: int = 0
     extra: dict = field(default_factory=dict)
 
     def to_json(self) -> dict:
@@ -147,6 +386,7 @@ class PrefixCacheSimulator:
         mode: str = "prefix",
         pic_recompute: float = 0.15,
         pic_scoping: str = "acl",
+        eviction: str = "lru",
     ):
         """``mode="prefix"`` mirrors vLLM automatic prefix caching.  ``mode="pic"``
         models *position-independent* chunk caching (CacheBlend-style): each
@@ -159,6 +399,9 @@ class PrefixCacheSimulator:
             raise ValueError("need at least 2 blocks")
         if mode not in ("prefix", "pic"):
             raise ValueError(mode)
+        if eviction not in EVICTION_POLICIES:
+            raise ValueError(f"unknown eviction policy {eviction!r}; known: {EVICTION_POLICIES}")
+        self.eviction = eviction
         self.num_blocks = num_blocks
         self.bs = block_size
         self.max_concurrency = max_concurrency
@@ -172,8 +415,13 @@ class PrefixCacheSimulator:
     # ----------------------------------------------------------- state
     def reset(self) -> None:
         self.blocks = [_Block(i) for i in range(self.num_blocks)]
-        self.free = _FreeQueue(range(self.num_blocks))
+        self.free = _make_free_queue(self.eviction, self.num_blocks, self.blocks)
+        self._track = self.eviction != "lru"      # LRU needs no access hooks
         self.table: dict[bytes, int] = {}
+        self.pinned: dict[bytes, int] = {}         # catalog: hash -> block, held with one extra reference
+        self.publish_tokens = 0
+        self.publishes = 0
+        self.max_pinned = 0
         self.in_flight: deque[tuple[str, list[int]]] = deque()
         self.records: list[SimRecord] = []
         self._seen_hashes: set[bytes] = set()
@@ -181,18 +429,76 @@ class PrefixCacheSimulator:
 
     # --------------------------------------------------------- hashing
     def block_hashes(self, prompt: BuiltPrompt) -> list[bytes]:
-        barriers = tuple((b.token_offset, b.scope_id) for b in prompt.barriers)
-        out: list[bytes] = []
-        parent: bytes | None = None
-        ids = prompt.token_ids
-        for i in range(len(ids) // self.bs):
-            s, e = i * self.bs, (i + 1) * self.bs
-            keys = scope_keys_for_block(barriers, s, e)
-            extra = tuple(keys) if keys else None
-            h = _hash(parent, tuple(ids[s:e]), extra)
-            out.append(h)
-            parent = h
-        return out
+        return prompt_block_hashes(prompt, self.bs)
+
+    def _take_free_block(self) -> tuple[int, bool]:
+        """Pop the next block to (re)use from the free queue; returns (block, evicted)."""
+        bid = self.free.popleft()
+        b = self.blocks[bid]
+        evicted = False
+        if b.hash is not None:
+            if self.table.get(b.hash) == bid:
+                del self.table[b.hash]
+            b.hash = None
+            b.from_probe = False
+            b.contributors = set()
+            evicted = True
+        return bid, evicted
+
+    def apply_publish(self, event: dict) -> int:
+        """Apply a catalog publish event (see ``catalog.EvidenceCatalog.maybe_publish``)."""
+        if event["mode"] == "hard":
+            return self.set_pinned(event["blocks"])
+        if event["mode"] == "soft":
+            if not isinstance(self.free, _FreeQueue):
+                raise ValueError("soft pinning is implemented on top of LRU eviction only")
+            self.free.protect([h for h, _ in event["blocks"]], self.blocks)
+            self.publishes += 1
+            self.max_pinned = max(self.max_pinned, len(event["blocks"]))
+            return 0
+        raise ValueError(f"unknown publish mode {event['mode']!r}")
+
+    def set_pinned(self, pins) -> int:
+        """Catalog publish: keep exactly the blocks ``pins`` = [(hash, acl), ...]
+        (parents before children) resident and unevictable.  Previously pinned
+        blocks that are not in ``pins`` become ordinary cached blocks.  Blocks
+        not in the cache are computed by the publisher; returns how many."""
+        want = {h for h, _ in pins}
+        for h in [h for h in self.pinned if h not in want]:
+            bid = self.pinned.pop(h)
+            b = self.blocks[bid]
+            b.ref_cnt -= 1
+            if b.ref_cnt == 0:
+                self.free.append(bid)
+        computed = 0
+        for h, acl in pins:
+            if h in self.pinned:
+                continue
+            bid = self.table.get(h)
+            if bid is not None:
+                b = self.blocks[bid]
+                if b.ref_cnt == 0:
+                    self.free.remove(bid)
+                b.ref_cnt += 1
+            else:
+                while len(self.free) == 0 and self.in_flight:
+                    self._retire_oldest()
+                if len(self.free) == 0:
+                    raise RuntimeError("catalog does not fit in the KV budget")
+                bid, _ = self._take_free_block()
+                b = self.blocks[bid]
+                b.hash = h
+                b.acl = acl
+                b.ref_cnt = 1
+                self.table[h] = bid
+                if self._track:
+                    self.free.on_insert(bid)
+                computed += 1
+            self.pinned[h] = bid
+        self.publish_tokens += computed * self.bs
+        self.publishes += 1
+        self.max_pinned = max(self.max_pinned, len(self.pinned))
+        return computed
 
     # ------------------------------------------------------- lifecycle
     def _retire_oldest(self) -> None:
@@ -330,6 +636,7 @@ class PrefixCacheSimulator:
         if len(self.free) - evictable_hits < need:
             raise RuntimeError(f"KV budget of {self.num_blocks} blocks cannot hold one request ({need} blocks)")
 
+        inflight = len(self.in_flight)
         for bid in hits:                       # touch
             b = self.blocks[bid]
             if b.ref_cnt == 0:
@@ -339,16 +646,9 @@ class PrefixCacheSimulator:
         new_bids: list[int] = []
         evictions = 0
         for _ in range(need):
-            bid = self.free.popleft()
-            b = self.blocks[bid]
-            if b.hash is not None:
-                if self.table.get(b.hash) == bid:
-                    del self.table[b.hash]
-                b.hash = None
-                b.from_probe = False
-                b.contributors = set()
-                evictions += 1
-            b.ref_cnt = 1
+            bid, evicted = self._take_free_block()
+            evictions += evicted
+            self.blocks[bid].ref_cnt = 1
             new_bids.append(bid)
 
         # block position -> physical block
@@ -380,6 +680,12 @@ class PrefixCacheSimulator:
             self.table[h] = assign[i]
         for i in range(len(hashes)):
             self.blocks[assign[i]].contributors.add(prompt.user)
+        if self._track:
+            for bid in hits:
+                self.free.on_hit(bid)
+            for i in range(total_tokens // bs):
+                if i not in hit_set:
+                    self.free.on_insert(assign[i])
 
         self.in_flight.append((prompt.req_id, assign))
         while len(self.in_flight) > self.max_concurrency:
@@ -394,6 +700,7 @@ class PrefixCacheSimulator:
             table_size=len(self.table), free_blocks=len(self.free),
             informative_positions=informative if (is_probe or prompt.meta.get("record_positions")) else [],
             honest_hit_blocks=honest_hits,
+            inflight=inflight,
         )
         self.records.append(rec)
         self._table_sizes.append(len(self.table))
@@ -422,6 +729,11 @@ class PrefixCacheSimulator:
             probe_unauthorized_hits=sum(r.unauthorized_hits for r in probes),
             probe_cached_tokens=sum(r.cached_tokens for r in probes),
             mode=self.mode,
+            eviction=self.eviction,
+            mean_inflight=(sum(r.inflight for r in recs) / len(recs)) if recs else 0.0,
+            publish_tokens=self.publish_tokens,
+            publishes=self.publishes,
+            max_pinned_blocks=self.max_pinned,
         )
 
 
@@ -429,14 +741,19 @@ def simulate(prompts, num_blocks: int, directory: Directory, block_size: int = 1
              max_concurrency: int = 8, output_tokens: int = 32,
              output_lengths: dict[str, int] | None = None,
              probe_rate: float = 0.0, probe_mode: str = "no_salt", seed: int = 0,
-             mode: str = "prefix", pic_recompute: float = 0.15, pic_scoping: str = "acl") -> tuple[list[SimRecord], SimSummary]:
+             mode: str = "prefix", pic_recompute: float = 0.15, pic_scoping: str = "acl",
+             eviction: str = "lru") -> tuple[list[SimRecord], SimSummary]:
     """Replay ``prompts``; with probability ``probe_rate`` after each request an
-    unauthorized user replays it adversarially (see ``PrefixCacheSimulator.probe``)."""
+    unauthorized user replays it adversarially (see ``PrefixCacheSimulator.probe``).
+    A prompt whose ``meta["publish"]`` is set (catalog publish event) first
+    updates the pinned blocks."""
     sim = PrefixCacheSimulator(num_blocks, directory, block_size, max_concurrency, output_tokens,
-                               mode=mode, pic_recompute=pic_recompute, pic_scoping=pic_scoping)
+                               mode=mode, pic_recompute=pic_recompute, pic_scoping=pic_scoping, eviction=eviction)
     rng = random.Random(seed)
     users = list(directory.users)
     for p in prompts:
+        if p.meta.get("publish") is not None:
+            sim.apply_publish(p.meta["publish"])
         sim.process(p, None if output_lengths is None else output_lengths.get(p.req_id))
         if probe_rate > 0 and rng.random() < probe_rate:
             final_acl = p.segments[-1].acl

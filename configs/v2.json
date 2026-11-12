@@ -120,6 +120,18 @@
       "dataset": "musique",
       "docs_per_request": 20,
       "question_pool_size": 2417
+    },
+    "hq_main_s3": {
+      "seed": 3
+    },
+    "hq_main_s4": {
+      "seed": 4
+    },
+    "mq_main_s3": {
+      "seed": 3,
+      "dataset": "musique",
+      "docs_per_request": 20,
+      "question_pool_size": 2417
     }
   },
   "policies_main": [
@@ -148,21 +160,78 @@
     16
   ],
   "gpu": {
+    "_comment": "Low-memory plan (catalog branch): Qwen2.5 0.5B/1.5B/7B swept over 0.5-4 GiB of KV; Qwen3-8B and Llama-3.1-8B at 2 GiB as a cross-family check (at 0.5 GiB they hold < 4.1k tokens, below our longest prompt). 32B dropped.",
     "models": [
+      "Qwen/Qwen2.5-0.5B-Instruct",
+      "Qwen/Qwen2.5-1.5B-Instruct",
       "Qwen/Qwen2.5-7B-Instruct",
       "Qwen/Qwen3-8B",
-      "meta-llama/Llama-3.1-8B-Instruct",
-      "Qwen/Qwen2.5-32B-Instruct"
+      "meta-llama/Llama-3.1-8B-Instruct"
     ],
     "chat_formats": {
+      "Qwen/Qwen2.5-0.5B-Instruct": "qwen2.5",
+      "Qwen/Qwen2.5-1.5B-Instruct": "qwen2.5",
       "Qwen/Qwen2.5-7B-Instruct": "qwen2.5",
       "Qwen/Qwen3-8B": "qwen3",
-      "meta-llama/Llama-3.1-8B-Instruct": "llama3",
-      "Qwen/Qwen2.5-32B-Instruct": "qwen2.5"
+      "meta-llama/Llama-3.1-8B-Instruct": "llama3"
     },
-    "kv_gib": [
-      2,
-      8
+    "cells": [
+      [
+        "Qwen/Qwen2.5-0.5B-Instruct",
+        0.5
+      ],
+      [
+        "Qwen/Qwen2.5-0.5B-Instruct",
+        1
+      ],
+      [
+        "Qwen/Qwen2.5-0.5B-Instruct",
+        2
+      ],
+      [
+        "Qwen/Qwen2.5-0.5B-Instruct",
+        4
+      ],
+      [
+        "Qwen/Qwen2.5-1.5B-Instruct",
+        0.5
+      ],
+      [
+        "Qwen/Qwen2.5-1.5B-Instruct",
+        1
+      ],
+      [
+        "Qwen/Qwen2.5-1.5B-Instruct",
+        2
+      ],
+      [
+        "Qwen/Qwen2.5-1.5B-Instruct",
+        4
+      ],
+      [
+        "Qwen/Qwen2.5-7B-Instruct",
+        0.5
+      ],
+      [
+        "Qwen/Qwen2.5-7B-Instruct",
+        1
+      ],
+      [
+        "Qwen/Qwen2.5-7B-Instruct",
+        2
+      ],
+      [
+        "Qwen/Qwen2.5-7B-Instruct",
+        4
+      ],
+      [
+        "Qwen/Qwen3-8B",
+        2
+      ],
+      [
+        "meta-llama/Llama-3.1-8B-Instruct",
+        2
+      ]
     ],
     "rates": [
       4,
@@ -205,5 +274,62 @@
     "mq_main_s0",
     "mq_main_s1",
     "mq_main_s2"
-  ]
+  ],
+  "lowmem": {
+    "_comment": "Low-memory sweep (simulator). Qwen2.5 family only: every request fits in 0.5 GiB of KV for these models.",
+    "models": [
+      "Qwen/Qwen2.5-0.5B-Instruct",
+      "Qwen/Qwen2.5-1.5B-Instruct",
+      "Qwen/Qwen2.5-7B-Instruct"
+    ],
+    "kv_gib": [
+      0.5,
+      1,
+      2,
+      4
+    ],
+    "dev_workloads": [
+      "hq_main_s0"
+    ],
+    "policies": [
+      "PerUser",
+      "Divergence",
+      "ACLScope",
+      "ACLScope+Tree",
+      "ACLKV-ungated",
+      "ACLKV",
+      "Global+Tree"
+    ]
+  },
+  "catalog_test": {
+    "_comment": "Pre-registered in docs/CATALOG.md (section 5) before these workloads were generated. Run once. 'catalog' is judged by the pass/fail rules; 'catalog_secondary' is reported descriptively.",
+    "workloads": [
+      "hq_main_s3",
+      "hq_main_s4",
+      "mq_main_s3"
+    ],
+    "attack_workloads": [
+      "hq_main_s3"
+    ],
+    "attack_kv_gib": 2,
+    "models": [
+      "Qwen/Qwen2.5-0.5B-Instruct",
+      "Qwen/Qwen2.5-1.5B-Instruct",
+      "Qwen/Qwen2.5-7B-Instruct"
+    ],
+    "kv_gib": [
+      0.5,
+      1,
+      2,
+      4
+    ],
+    "baselines": [
+      "PerUser",
+      "ACLScope",
+      "ACLKV",
+      "Global+Tree"
+    ],
+    "catalog": "pin=soft,budget=0.5,period=500,window=2000,order=fp,min_count=2",
+    "catalog_secondary": "pin=hard,budget=0.5,period=500,window=2000,order=fp,min_count=2"
+  }
 }

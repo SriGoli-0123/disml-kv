@@ -2,13 +2,13 @@
 # SLURM job array for the v2 live matrix (one A100 per (model, KV budget) cell).
 #
 #   python scripts/make_manifest.py
-#   sbatch --array=0-7 scripts/sol_array.sbatch                    # all cells
+#   sbatch --array=0-13 scripts/sol_array.sbatch                   # all 14 cells
 #   sbatch --array=0 --export=ALL,WHAT=quality scripts/sol_array.sbatch
 #   JUDGE_URL=https://openai.rc.asu.edu/v1 JUDGE_MODEL=qwen3-235b-a22b-instruct-2507 \
 #     JUDGE_API_KEY=$SOL_API_KEY sbatch --array=0 --export=ALL scripts/sol_array.sbatch
 #
-# 32B cells need 2 GPUs (or an INT8 checkpoint): submit them with --gres=gpu:a100:2
-# and TP=2 (start_vllm.sh passes extra args through VLLM_EXTRA_ARGS).
+# Every cell fits one A100 (largest model: 8B).  To add a model that needs two
+# GPUs, submit it with --gres=gpu:a100:2 and VLLM_EXTRA_ARGS="--tensor-parallel-size 2".
 #
 #SBATCH --job-name=aclkv-v2
 #SBATCH --partition=general

@@ -32,6 +32,25 @@ _KNOWN: dict[str, tuple[int, int, int]] = {
 }
 
 
+# Parameter counts read from each checkpoint's safetensors metadata (bf16), used
+# to report throughput per GiB of total GPU memory (weights + KV cache).
+# Llama-3.1-8B is gated; its count was read from the public unsloth mirror of
+# the same weights.
+_PARAMS: dict[str, int] = {
+    "Qwen/Qwen2.5-0.5B-Instruct": 494_032_768,
+    "Qwen/Qwen2.5-1.5B-Instruct": 1_543_714_304,
+    "Qwen/Qwen2.5-7B-Instruct": 7_615_616_512,
+    "Qwen/Qwen3-8B": 8_190_735_360,
+    "meta-llama/Llama-3.1-8B-Instruct": 8_030_261_248,
+}
+
+
+def weights_gib(model: str, dtype_bytes: int = 2) -> float | None:
+    """Weight memory in GiB (``None`` if the model is not in the table)."""
+    n = _PARAMS.get(model)
+    return None if n is None else n * dtype_bytes / GIB
+
+
 @dataclass(frozen=True)
 class KVGeometry:
     model: str

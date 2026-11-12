@@ -14,6 +14,12 @@ Suites -> results/v2/<suite>.csv
              query noise, concurrency
   placement  where answer-bearing evidence lands under each ordering
   retriever  BM25 vs dense (bge-small) vs hybrid (RRF) retrieval
+  lowmem     0.5-4 GiB KV x {Qwen2.5-0.5B, 1.5B, 7B}; ACLKV with LRU/LFU/GDSF/ARC
+  catalog_dev   evidence-catalog tuning (dev seed hq_main_s0 only)
+  catalog_test  pre-registered pass/fail test on fresh seeds (docs/CATALOG.md); run once
+
+Grid keys: kv (GiB), c (concurrency), model, mode, evict (lru|lfu|gdsf|arc),
+catalog ("pin=..,budget=..,period=..,window=..,order=.." for the Catalog policy).
 """
 import argparse
 import csv
@@ -91,8 +97,21 @@ def _placement(prompts) -> dict:
             "top1_at_edge_pct": 100.0 * edge_top1 / max(1, len(prompts))}
 
 
+def _order_stats(prompts) -> dict:
+    """Order channel over honest requests (see aclkv.ordering.order_exposure)."""
+    vals = [p.meta["order_anon"] for p in prompts if "order_anon" in p.meta]
+    if len(vals) < len(prompts):
+        return {"order_revealed_pct": float("nan"), "order_singled_pct": float("nan"), "order_min_anon": ""}
+    rev = [a for a in vals if a is not None and a >= 1]
+    n = max(1, len(prompts))
+    return {"order_revealed_pct": 100.0 * len(rev) / n, "order_singled_pct": 100.0 * sum(a == 1 for a in rev) / n,
+            "order_min_anon": min(rev) if rev else -1}
+
+
 def run_task(task: dict) -> list[dict]:
     from aclkv.attacks import run_attack_trace
+    from aclkv.catalog import CatalogConfig
+    from aclkv.model_info import weights_gib
     from aclkv.pipeline import build_prompts
     from aclkv.policies import get_policy
     from aclkv.simulator import simulate
@@ -109,24 +128,38 @@ def run_task(task: dict) -> list[dict]:
             "scenario": w.config.scenario}
     rows = []
     if task["kind"] == "sim":
-        prompts = build_prompts(w, corpus, pol, builder, settings)
-        n_tok = sum(p.num_tokens for p in prompts)
-        pad = sum(sg.n_pad for p in prompts for sg in p.segments)
-        shared_docs = sum(p.meta.get("n_shared_docs", 0) for p in prompts) / max(1, len(prompts))
+        is_catalog = pol.ordering == "catalog"
+        prompts = None if is_catalog else build_prompts(w, corpus, pol, builder, settings)
         for g in task["grid"]:
             model = g.get("model", CFG["model"])
             nb = _blocks(model, g["kv"])
+            cat = None
+            if is_catalog:          # the publisher works within the KV budget: build per grid point
+                cat = CatalogConfig.parse(g.get("catalog", ""))
+                prompts = build_prompts(w, corpus, pol, _builder(w, settings), settings, catalog=cat,
+                                        num_blocks=nb, output_tokens=CFG["max_tokens"])
+            n_tok = sum(p.num_tokens for p in prompts)
+            pad = sum(sg.n_pad for p in prompts for sg in p.segments)
+            shared_docs = sum(p.meta.get("n_shared_docs", 0) for p in prompts) / max(1, len(prompts))
+            evict = g.get("evict", "lru")
             _, s = simulate(prompts, nb, w.directory, CFG["block_size"], max_concurrency=g["c"],
                             output_tokens=CFG["max_tokens"], mode=g.get("mode", "prefix"),
-                            pic_recompute=g.get("pic_recompute", 0.15), pic_scoping=g.get("pic_scoping", "acl"))
+                            pic_recompute=g.get("pic_recompute", 0.15), pic_scoping=g.get("pic_scoping", "acl"),
+                            eviction=evict)
+            pub_pct = 100.0 * s.publish_tokens / max(1, s.prompt_tokens)
+            wg = weights_gib(model)
             rows.append({**base, "model": model, "kv_gib": g["kv"], "concurrency": g["c"], "mode": g.get("mode", "prefix"),
                          "pic_scoping": g.get("pic_scoping", ""), "pic_recompute": g.get("pic_recompute", ""),
+                         "eviction": evict, "catalog": cat.tag() if cat else "",
                          "num_blocks": nb, "requests": s.requests, "prompt_tokens": s.prompt_tokens,
                          "mean_prompt_tokens": n_tok / max(1, len(prompts)), "pad_frac": pad / max(1, n_tok),
                          "cached_tokens": s.cached_tokens, "cached_pct": s.cached_pct,
-                         "recomputed_per_req": s.recomputed_tokens / max(1, s.requests),
+                         "publish_tokens": s.publish_tokens, "publish_pct": pub_pct, "net_cached_pct": s.cached_pct - pub_pct,
+                         "recomputed_per_req": (s.recomputed_tokens + s.publish_tokens) / max(1, s.requests),
                          "evictions": s.evictions, "stalls": s.stalls, "unauthorized_hits": s.unauthorized_hits,
-                         "shared_docs_per_req": shared_docs})
+                         "mean_inflight": s.mean_inflight, "pinned_blocks_max": s.max_pinned_blocks,
+                         "weights_gib": "" if wg is None else round(wg, 3),
+                         "shared_docs_per_req": shared_docs, **_order_stats(prompts)})
         if task.get("placement"):
             for p, r in zip(prompts, w.requests):
                 p.meta["top1"] = min(r.docs, key=lambda d: d["rank"])["chunk_id"] if r.docs else None
@@ -135,10 +168,14 @@ def run_task(task: dict) -> list[dict]:
                 row.update(pl)
     elif task["kind"] == "attack":
         g = task["grid"][0]
-        a = run_attack_trace(w, corpus, pol, builder, settings, _blocks(CFG["model"], g["kv"]), CFG["block_size"],
+        cat = CatalogConfig.parse(g["catalog"]) if g.get("catalog") else None
+        model = g.get("model", CFG["model"])
+        a = run_attack_trace(w, corpus, pol, builder, settings, _blocks(model, g["kv"]), CFG["block_size"],
                              g["c"], CFG["max_tokens"], probe_rate=task.get("probe_rate", 0.1),
-                             bypass_rate=task.get("bypass_rate", 0.05), seed=w.config.seed)
-        rows.append({**base, "kv_gib": g["kv"], "concurrency": g["c"], "kanon": pol.kanon, **a.to_json()})
+                             bypass_rate=task.get("bypass_rate", 0.05), seed=w.config.seed,
+                             eviction=g.get("evict", "lru"), catalog=cat)
+        rows.append({**base, "model": model, "kv_gib": g["kv"], "concurrency": g["c"], "kanon": pol.kanon,
+                     "eviction": g.get("evict", "lru"), "catalog": cat.tag() if cat else "", **a.to_json()})
     for r in rows:
         r["task_s"] = round(time.time() - t0, 1)
     return rows
@@ -160,8 +197,8 @@ def suite_tasks(suite: str, quick: int) -> list[dict]:
                 add("sim", wl, pol, [{"kv": 2, "c": 16}, {"kv": 4, "c": 16}], placement=True)
     elif suite == "privacy":
         pols = ["Global", "Global+Tree", "PerUser", "Divergence", "Binary", "B3", "ACLScope", "ACLScope+Tree",
-                "acl_scope/tree:k=2", "ACLKV", "acl_scope/tree:k=5", "acl_scope/tree:k=10",
-                "acl_scope/retrieval:k=3", "acl_scope/tree:k=3,tail=inherit"]
+                "acl_scope/ktree:k=2", "ACLKV", "acl_scope/ktree:k=5", "acl_scope/ktree:k=10", "ACLKV-ungated",
+                "acl_scope/retrieval:k=3", "acl_scope/ktree:k=3,tail=inherit"]
         for wl in ["hq_main_s0", "hq_main_s1", "hq_main_s2", "mq_main_s0"]:
             for pol in pols:
                 add("attack", wl, pol)
@@ -170,13 +207,14 @@ def suite_tasks(suite: str, quick: int) -> list[dict]:
         for wl_ in ["hq_main_s0", "hq_main_s1", "hq_main_s2", "mq_main_s0"]:
             for pol, var in [("ACLScope", "tail=private"), ("acl_scope/retrieval:tail=inherit", "tail=inherit"),
                              ("ACLScope+Tree", "tail=private"), ("acl_scope/tree:tail=inherit", "tail=inherit"),
-                             ("ACLKV", "tail=private"), ("acl_scope/tree:k=3,tail=inherit", "tail=inherit")]:
+                             ("ACLKV", "tail=private"), ("acl_scope/ktree:k=3,tail=inherit", "tail=inherit")]:
                 add("sim", wl_, pol, variant=var)
             for pol, var in [("acl_scope/retrieval", "order=retrieval"), ("acl_scope/acl_aware", "order=acl_aware(v1 B4)"),
                              ("acl_scope/reuse_aware", "order=reuse_aware(v1 B5)"),
                              ("acl_scope/reuse_aware:anchor=2", "order=reuse_aware+anchor(v1 B6)"),
                              ("acl_scope/tree", "order=tree"), ("acl_scope/layout", "order=edge-layout"),
                              ("acl_scope/lcr", "order=lcr"), ("acl_scope/tree:k=3", "order=tree,k=3"),
+                             ("acl_scope/ktree:k=3", "order=k-gated-tree,k=3"),
                              ("acl_scope/tree_k:k=3", "order=privacy-aware-tree,k=3")]:
                 add("sim", wl_, pol, variant=var, placement=True)
         for align in (True, False):
@@ -224,6 +262,49 @@ def suite_tasks(suite: str, quick: int) -> list[dict]:
                     continue
                 for pol in ("PerUser", "Divergence", "ACLScope", "ACLScope+Tree", "ACLKV", "Global+Tree"):
                     add("sim", wl, pol, variant=f"retriever={ret.strip('_') or 'bm25'}", placement=True)
+    elif suite == "lowmem":
+        LM = CFG["lowmem"]
+        grid = [{"kv": kv, "c": 16, "model": m} for m in LM["models"] for kv in LM["kv_gib"]]
+        for wl in LM["dev_workloads"]:
+            for pol in LM["policies"]:
+                add("sim", wl, pol, grid, variant="lowmem")
+            for ev in ("lfu", "gdsf", "arc"):
+                add("sim", wl, "ACLKV", [{**g, "evict": ev} for g in grid], variant=f"evict={ev}")
+    elif suite == "catalog_dev":
+        LM = CFG["lowmem"]
+        wl = LM["dev_workloads"][0]
+        m7 = "Qwen/Qwen2.5-7B-Instruct"
+        grid7 = [{"kv": kv, "c": 16, "model": m7} for kv in LM["kv_gib"]]
+        for pin in ("hard", "soft", "none"):
+            for budget in (0.25, 0.5):
+                for period in (250, 500, 1000):
+                    for order in ("fp", "ret"):
+                        spec = f"pin={pin},budget={budget},period={period},window=1000,order={order}"
+                        for g in grid7:
+                            add("sim", wl, "Catalog", [{**g, "catalog": spec}], variant=spec)
+        for window in (500, 2000):
+            for pin in ("hard", "soft"):
+                spec = f"pin={pin},budget=0.5,period=500,window={window},order=fp"
+                for g in grid7:
+                    add("sim", wl, "Catalog", [{**g, "catalog": spec}], variant=spec)
+    elif suite == "catalog_test":
+        CT = CFG["catalog_test"]
+        grid = [{"kv": kv, "c": 16, "model": m} for m in CT["models"] for kv in CT["kv_gib"]]
+        for wl in CT["workloads"]:
+            for pol in CT["baselines"]:
+                add("sim", wl, pol, grid, variant="baseline")
+            for ev in ("lfu", "gdsf", "arc"):
+                add("sim", wl, "ACLKV", [{**g, "evict": ev} for g in grid], variant=f"evict={ev}")
+            for g in grid:
+                add("sim", wl, "Catalog", [{**g, "catalog": CT["catalog"]}], variant="catalog")
+                add("sim", wl, "Catalog", [{**g, "catalog": CT["catalog_secondary"]}], variant="catalog_secondary")
+        for wl in CT["attack_workloads"]:
+            g = {"kv": CT["attack_kv_gib"], "c": 16, "model": "Qwen/Qwen2.5-7B-Instruct"}
+            for pol in ("ACLScope", "ACLKV-ungated", "ACLKV"):
+                add("attack", wl, pol, [g])
+            add("attack", wl, "ACLKV", [{**g, "evict": "arc"}])
+            for spec in (CT["catalog"], CT["catalog_secondary"]):
+                add("attack", wl, "Catalog", [{**g, "catalog": spec}])
     else:
         raise SystemExit(f"unknown suite {suite}")
     return T
@@ -241,7 +322,8 @@ def main():
     for suite in args.suites:
         tasks = suite_tasks(suite, args.quick)
         # longest tasks first: attacks, then large workloads
-        tasks.sort(key=lambda t: (t["kind"] != "attack", "d40" not in t["workload"], "u500" not in t["workload"]))
+        tasks.sort(key=lambda t: (t["kind"] != "attack", "d40" not in t["workload"], "u500" not in t["workload"],
+                                  t["policy"] != "Catalog"))
         t0 = time.time()
         rows = []
         with get_context("spawn").Pool(args.jobs) as pool:

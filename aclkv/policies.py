@@ -12,7 +12,11 @@ v2 policy set (paper names)::
     ACLScope       ACL-derived multi-scope hashing, retrieval order
     ACLScope+Tree  ACLScope + cache-aware ordering (CacheWeaver-style tree)
     ACLKV          ours: ACLScope + private query + k-anonymous promotion,
-                   with cache-aware (CacheWeaver-style) ordering
+                   with a k-gated cache-aware ordering (the tree walk only
+                   follows prefixes >= k distinct users requested, so the
+                   visible order leaks no more than a cache hit does)
+    Catalog        ours (catalog branch): k-anonymous *published* evidence
+                   catalog; see ``aclkv/catalog.py``
     Global         unrestricted sharing — insecure efficiency upper bound
     Global+Tree    CacheWeaver as published (insecure)
 
@@ -68,9 +72,15 @@ POLICIES: dict[str, Policy] = {
     "Binary": Policy("Binary", "two_level", "retrieval", "one public/private boundary, oracle labels (SafeKV-style)"),
     "ACLScope": Policy("ACLScope", "acl_scope", "retrieval", "ACL-derived multi-scope hashing, retrieval order"),
     "ACLScope+Tree": Policy("ACLScope+Tree", "acl_scope", "tree", "ACLScope + cache-aware ordering (CacheWeaver-style)"),
-    "ACLKV": Policy("ACLKV", "acl_scope", "tree",
-                    "ours: ACL scopes + private query + k-anonymous promotion + cache-aware order",
+    "ACLKV": Policy("ACLKV", "acl_scope", "ktree",
+                    "ours: ACL scopes + private query + k-anonymous promotion + k-gated cache-aware order",
                     kanon=DEFAULT_KANON),
+    "ACLKV-ungated": Policy("ACLKV-ungated", "acl_scope", "tree",
+                            "ACLKV before the order-channel fix (plain tree walk; leaks through the order)",
+                            kanon=DEFAULT_KANON),
+    "Catalog": Policy("Catalog", "acl_scope", "catalog",
+                      "ours: ACL scopes + private query + k-anonymous published evidence catalog",
+                      kanon=DEFAULT_KANON),
     "ACLKV-k1": Policy("ACLKV-k1", "acl_scope", "tree", "ACLKV without k-anonymous promotion (= ACLScope+Tree)"),
     "Global": Policy("Global", "global", "retrieval", "INSECURE unrestricted sharing (upper bound)", secure=False),
     "Global+Tree": Policy("Global+Tree", "global", "tree", "INSECURE CacheWeaver-style ordering, global cache", secure=False),
