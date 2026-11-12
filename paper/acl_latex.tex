@@ -188,7 +188,7 @@ If two prompts agree on their first $j$ blocks, they contain the same passages i
 \end{algorithmic}
 \end{algorithm}
 
-\paragraph{Evidence order.} Prefix reuse requires that related requests place shared evidence at the same positions. Following CacheWeaver \citep{tan2026cacheweaver}, \sysname keeps a trie over a sliding window of recently served evidence sequences and greedily places first the passages whose prefix was served most often, followed by the remaining passages in retrieval order. We evaluated two access-aware refinements, a walk that prefers already-promoted prefixes and a layout that places relevant evidence at the edges of the context; neither helped (Section~\ref{sec:ordering}), so \sysname uses the plain tree.
+\paragraph{Evidence order.} Prefix reuse requires that related requests place shared evidence at the same positions. Following CacheWeaver \citep{tan2026cacheweaver}, \sysname keeps a trie over a sliding window of recently served evidence sequences and greedily places first the passages whose prefix was served most often, followed by the remaining passages in retrieval order. We evaluated two access-aware refinements, a walk that prefers already-promoted prefixes and a layout that places relevant evidence at the edges of the context; neither helped (Section~\ref{sec:ordering}), so \sysname uses the tree walk, but enters only prefixes that at least $k$ distinct users requested, so that the order of the passages reveals no more than a cache hit.
 
 % ---------------------------------------------------------------------------
 \section{Experimental Setup}

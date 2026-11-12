@@ -30,9 +30,10 @@ OUT="results/v2_live/${MTAG}_kv${KV}"
 PORT="${PORT:-8000}"; BASE="http://127.0.0.1:$PORT"
 mkdir -p "$OUT" logs
 # vLLM refuses to start unless the KV cache holds one max-length sequence.  Our longest
-# prompt is 5,876 tokens (+48 output), so cap max_model_len at 8192 or the KV capacity.
+# prompt (MuSiQue, seeds 0-3) is 6,773 tokens (+48 output), so cap max_model_len at 8192
+# or the KV capacity.
 KV_TOKENS=$(python -c "from aclkv.model_info import kv_geometry, GIB; print(kv_geometry('$MODEL').num_blocks(int(float('$KV') * GIB), 16) * 16)")
-if [ "$KV_TOKENS" -lt 5924 ]; then echo "WARNING: ${KV} GiB holds only $KV_TOKENS tokens for $MODEL; the longest prompts will be rejected"; fi
+if [ "$KV_TOKENS" -lt 6821 ]; then echo "WARNING: ${KV} GiB holds only $KV_TOKENS tokens for $MODEL; the longest prompts will be rejected"; fi
 DEFAULT_LEN=$(( KV_TOKENS < 8192 ? KV_TOKENS : 8192 ))
 export MODEL MAX_MODEL_LEN="${MAX_MODEL_LEN:-$DEFAULT_LEN}"
 

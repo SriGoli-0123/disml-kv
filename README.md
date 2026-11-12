@@ -3,8 +3,12 @@
 Team: Vedang Vasant Avaghade, Sri Harshith Goli, Rimpa Nandi, Surya Chaitanya Buse.
 
 CSE 598 (Data-Intensive Systems for ML) project, extended into an ACL-style paper draft
-(`paper/`, official ACL template). **v2 (this branch, `feat/aclkv-v2`)** fixes the problems found in the
+(`paper/`, official ACL template). **v2 (`feat/aclkv-v2`)** fixes the problems found in the
 v1 review and replaces the synthetic evaluation with retrieval-driven multi-tenant workloads.
+**This branch (`catalog`)** targets the course topic, serving LLMs in low-resource environments:
+it closes an order-channel leak in AclKV, sweeps 0.5–4 GiB of KV cache with smaller models, adds
+frequency-aware eviction baselines (LFU, GDSF, ARC), and tests a k-anonymous evidence catalog
+against them in a pre-registered experiment. Details and results: [`docs/CATALOG.md`](docs/CATALOG.md).
 The original v1 implementation and runbook are kept at the end of this file and remain reproducible
 (policies `B0`–`B6`, `UB*` are exact aliases).
 
@@ -16,9 +20,12 @@ re-asks a guessed question learns from cache hits whether someone asked it. v1 l
 (99.6% of insider probes) because the question inherited its documents' scope, and even with a
 private question the *retrieved-evidence fingerprint* singles out one colleague in 91.5% of probes.
 **AclKV** = ACL scope barriers + private question scope + **k-anonymous promotion** (an evidence prefix becomes
-shareable only after k distinct authorized users requested it) + CacheWeaver-style prefix-tree ordering.
-With k = 3 it singles out nobody (0%) while keeping 91% of the reuse of unrestricted cache-aware
-sharing (5.0× per-user isolation on HotpotQA, 9.2× on MuSiQue).
+shareable only after k distinct authorized users requested it) + CacheWeaver-style prefix-tree ordering,
+**k-gated** on the `catalog` branch (the walk only follows prefixes that k distinct users requested; the
+ungated walk let the *order* of the sources single out a colleague in 19–31% of requests).
+With k = 3 it singles out nobody (0%, through hits or order) while keeping 87% (HotpotQA) / 84% (MuSiQue)
+of the reuse of ACL scopes with the unrestricted cache-aware order (`ACLScope+Tree`), 4.8× per-user
+isolation on HotpotQA and 8.5× on MuSiQue.
 
 ## What changed from v1 (review findings → fixes)
 
@@ -38,8 +45,9 @@ sharing (5.0× per-user isolation on HotpotQA, 9.2× on MuSiQue).
 ## v2 results (simulator, validated against the 192 live A100 runs on `main`)
 
 * Simulator vs. live vLLM: mean abs. error **0.055 pp** over 192 runs (r = 0.99997); live mean TTFT is linear in recomputed tokens (R² = 0.998).
-* 2 GiB, HotpotQA (3 seeds): per-user 1.13%, divergence 4.67%, ACL scopes 5.20%, ACL + tree 6.25%, **AclKV 5.67%**, global (insecure) 5.20%.
-* Insider probes: ACL scopes single out a colleague in 91.5%; **AclKV: 0%** (min anonymity set 2); per-user/divergence: 0% (but far less reuse).
+* 2 GiB, HotpotQA (3 seeds): per-user 1.13%, divergence 4.67%, ACL scopes 5.20%, ACL + tree 6.25%, **AclKV 5.42%** (5.67% before the order fix), global (insecure) 5.20%.
+* Insider probes: ACL scopes single out a colleague in 91.5%; **AclKV: 0%** (min anonymity set 2) through cache hits and through the order; per-user/divergence: 0% (but far less reuse).
+* Low memory (`catalog` branch, `docs/CATALOG.md`): replacing vLLM's LRU with ARC eviction adds +1.66 points on average at 0.5–4 GiB (fresh seeds) without changing privacy; the k-anonymous evidence catalog failed its pre-registered test against ARC.
 * Gains grow with tenants (1.5× → 17.8× vs. per-user from 20 → 500 users), KV budget (ACL + tree 5.4% → 14.3% from 1 → 16 GiB) and shared context (pinned handbook: 32.8% vs. 5.7% per-user).
 * The v1 synthetic-injection workload overstated reuse **6.6×**.
 * Answer quality (v1 live pilot, question-clustered bootstrap): no significant change from cache-aware ordering (all 95% CIs contain 0).
@@ -60,18 +68,23 @@ python scripts/make_paper_assets.py         # paper/figures, paper/tables, paper
 cd paper && tectonic acl_latex.tex          # or upload paper/ to Overleaf
 ```
 
-GPU (ASU SOL, one A100 per cell; 4 models × {2, 8} GiB):
+GPU (ASU SOL, one A100 per cell; 14 cells: Qwen2.5-0.5B/1.5B/7B × {0.5, 1, 2, 4} GiB, Qwen3-8B and
+Llama-3.1-8B at 2 GiB; see `gpu.cells` in `configs/v2.json`):
 
 ```bash
 bash scripts/setup_a100.sh                  # once: venv, vLLM 0.29.0, data, workloads, manifest
-sbatch --array=0-7 scripts/sol_array.sbatch
+sbatch --array=0-13 scripts/sol_array.sbatch
 JUDGE_URL=https://openai.rc.asu.edu/v1 JUDGE_MODEL=qwen3-235b-a22b-instruct-2507 JUDGE_API_KEY=$SOL_API_KEY \
   sbatch --array=0 --export=ALL,WHAT=quality scripts/sol_array.sbatch
 python scripts/analyze_live_v2.py && python scripts/make_paper_assets.py   # fills the TBD cells
 ```
 
-Cells 6–7 (Qwen2.5-32B) need 2 GPUs: `sbatch --gres=gpu:a100:2 --export=ALL,VLLM_EXTRA_ARGS="--tensor-parallel-size 2" ...`.
-Llama-3.1-8B is gated on Hugging Face (`export HF_TOKEN=...`).
+Every cell fits one A100 (the 32B model was dropped for the low-resource focus). `run_cell.sh` caps
+vLLM's `max_model_len` at 8,192 tokens or the KV capacity, whichever is smaller, so 0.5 GiB cells start
+(the longest prompt is 6,773 tokens).
+The open-loop analysis reports goodput per GiB of KV cache and per GiB of weights + KV cache.
+Llama-3.1-8B is gated on Hugging Face (`export HF_TOKEN=...`). LFU/GDSF/ARC eviction and catalog
+pinning are simulator-only: vLLM 0.29 evicts with LRU and has no pin API.
 
 ---
 

@@ -124,3 +124,81 @@ the 585 blocks (its reserve was sized from the largest request seen so far). Fix
 435c8cc): if a request cannot fit even after every running request has finished, hard-pinned blocks
 are released, deepest first, and counted as `pin_breaks`. This only changes hard pinning; the
 candidate (soft pins), the baselines and the rules above are unchanged. No test result had been seen.
+
+## 6. Test result (fresh seeds, run once): **FAIL**
+
+`python scripts/analyze_catalog.py test` on `results/catalog/catalog_test.csv`:
+
+| rule | result |
+|---|---|
+| 1. beats the best baseline in ≥ 9 of 12 cells | **0 of 12** (ACLKV + ARC is the best baseline in every cell) |
+| 2. mean margin ≥ +0.5 points | **−0.50** |
+| 3. requests in flight ≥ 95% of ACLKV | pass (identical in every cell) |
+| 4. privacy | pass (0 unauthorized hits; nobody singled out through hits or order) |
+
+Mean over the 12 cells (each the mean of `hq_main_s3`, `hq_main_s4`, `mq_main_s3`):
+
+| policy | net cached % | requests in flight |
+|---|---|---|
+| PerUser | 1.51 | 13.7 |
+| ACLScope | 5.11 | 13.8 |
+| ACLKV (vLLM LRU) | 5.29 | 13.8 |
+| ACLKV + GDSF | 5.74 | 13.8 |
+| ACLKV + LFU | 6.66 | 13.8 |
+| **ACLKV + ARC** | **6.95** | 13.8 |
+| Catalog, soft pin (candidate) | 6.45 | 13.8 |
+| Catalog, hard pin (descriptive) | 7.43 | **11.9** |
+| Global + tree order (insecure, LRU) | 7.15 | 13.8 |
+
+Colleague (insider) harness, `hq_main_s3`, 7B, 2 GiB:
+
+| policy | singled out by a hit | singled out by the order | smallest set | honest cached % |
+|---|---|---|---|---|
+| ACLScope | 87.9% | 0% | 1 | 5.09 |
+| ACLKV before the order fix | 0% | **19.8%** | 1 (order) | 5.39 |
+| **ACLKV** | 0% | **0%** | 2 | 5.09 |
+| ACLKV + ARC | 0% | 0% | 2 | 7.19 |
+| Catalog, soft pin | 0% | 0% | 2 | 6.99 |
+| Catalog, hard pin | 0% | 0% | 3 | 9.06 |
+
+What the test shows:
+
+1. **The catalog is a negative result.** Frequency-aware eviction gets the benefit of keeping
+   popular evidence without reserving memory; the soft-pinned catalog never beats ARC.
+2. **Hard pinning trades concurrency for hits.** On MuSiQue (20 passages per prompt) at 7B / 2 GiB
+   it nearly doubles cached tokens (6.51% vs 3.36% for ARC) but halves the requests that fit at
+   once (6.8 vs 13.0). Whether that wins on time-to-first-token needs a GPU run with a pin API; the
+   simulator cannot say. At 7B / 0.5 GiB it had to release pins 35 times for long requests.
+3. **ACLKV + ARC is the best private configuration**: +1.66 points over vLLM's LRU on average
+   (1.02–1.53× per cell), within 0.2 points of the insecure global cache under LRU, with the same
+   privacy as ACLKV (eviction does not change who can hit which block).
+4. **The order-channel fix holds on unseen data** (19.8% → 0%).
+
+Implications. AclKV (k-gated walk) stays the method. ARC/LFU are prior art (RAGCache's PGDSF, an ARC
+port to vLLM, HA-RAG); what we can claim is that they compose with ACL scopes and k-anonymous
+promotion without weakening them. vLLM 0.29 evicts with LRU only, so the live A100 runs measure
+LRU; frequency-aware eviction needs an engine change. All numbers above are simulator results
+(validated against 192 live runs to 0.055 points for LRU; the eviction variants are not
+live-validated).
+
+## 7. Effect on the committed v2 results
+
+Because ACLKV's ordering changed, all six v2 simulator suites were regenerated
+(`python scripts/run_v2.py main privacy ablation pic scaling retriever`). Every row that does not
+involve ACLKV is byte-identical to the previous commit; the ACLKV rows changed as follows
+(2 GiB unless noted):
+
+| | before (plain walk) | after (k-gated walk) |
+|---|---|---|
+| HotpotQA cached %, 3 seeds | 5.67 | 5.42 |
+| MuSiQue cached %, 3 seeds | 3.50 | 3.23 |
+| share of `ACLScope+Tree` reuse kept (HotpotQA / MuSiQue) | 91% / 91% | 87% / 84% |
+| vs per-user (HotpotQA / MuSiQue) | 5.0× / 9.2× | 4.8× / 8.5× |
+| share of tree reuse kept at 16 GiB | 69% | 59% |
+| colleague singled out by a hit | 0% | 0% |
+| colleague singled out by the order (HotpotQA s0–s2 / MuSiQue s0) | 19–20% / 30.6% | 0% / 0% |
+
+`paper/numbers.tex`, the tables and two figures were regenerated with `make_paper_assets.py`; the
+paper's evidence-order paragraph now states the k-gate. The rest of the prose (for example the
+contribution list and the discussion of the order channel) still needs updating when paper writing
+resumes.
