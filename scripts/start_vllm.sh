@@ -80,4 +80,5 @@ exec vllm serve "$MODEL" \
   --enable-prefix-caching \
   --enable-prompt-tokens-details \
   --dtype bfloat16 \
+  ${VLLM_EXTRA_ARGS:-} \
   "$@"

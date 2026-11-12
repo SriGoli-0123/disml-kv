@@ -120,3 +120,20 @@ def scope_keys_for_block(barriers, start_token_idx: int, end_token_idx: int) -> 
     the parent hash, a barrier only needs to be keyed into the block that
     contains it — all subsequent blocks inherit it."""
     return [sid for off, sid in barriers if start_token_idx <= off < end_token_idx]
+
+
+def to_salt_regions(barriers) -> list[tuple[int, str]]:
+    """Barriers in the shape of vLLM's proposed native multi-barrier API.
+
+    RFC #16016 option B is being upstreamed as ``Request.salt_regions``:
+    ``(token_offset, salt)`` transitions, mutually exclusive with
+    ``cache_salt`` (vllm-project/vllm PR #52655, open as of Oct 2026).  Once it
+    lands, the plugin becomes unnecessary: the middleware sends these regions
+    and the engine applies them.  Accepts ``Barrier`` objects or the decoded
+    ``(offset, scope_id)`` tuples.
+    """
+    out = []
+    for b in barriers:
+        off, sid = (b.token_offset, b.scope_id) if hasattr(b, "token_offset") else b
+        out.append((int(off), str(sid)))
+    return out
