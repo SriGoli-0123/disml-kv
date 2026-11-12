@@ -1,0 +1,80 @@
+policy,prediction,gold,similarity,em
+B6,Ronald Reagan,Ronald Wilson Reagan,0.928,0
+B6,1995-2012,1995 to 2012,0.943,0
+B3,Marika Green,Marika Nicolette Green,0.901,0
+B3,Sean Payton,Patrick Sean Payton,0.942,0
+B6,Harvard,Harvard University,0.95,0
+B6,Marika Green,Marika Nicolette Green,0.901,0
+B6,Marika Green,Marika Nicolette Green,0.901,0
+B6,Kentucky Fried Chicken,Kentucky Fried Chicken (KFC),0.919,0
+B6,Gary Johnson,Gary Earl Johnson,0.911,0
+B3,Ronald Reagan,Ronald Wilson Reagan,0.928,0
+B3,English and French,"French, English and Spanish",0.916,0
+B3,Sean Payton,Patrick Sean Payton,0.942,0
+B3,Marika Green,Marika Nicolette Green,0.901,0
+B6,Ronald Reagan,Ronald Wilson Reagan,0.928,0
+B3,Gary Johnson,Gary Earl Johnson,0.911,0
+B3,Kentucky Fried Chicken,Kentucky Fried Chicken (KFC),0.919,0
+B6,Sean Payton,Patrick Sean Payton,0.942,0
+B3,Kelly Osbourne,Kelly Lee Osbourne,0.941,0
+B6,Kentucky Fried Chicken,Kentucky Fried Chicken (KFC),0.919,0
+B3,English and French,"French, English and Spanish",0.916,0
+B3,1995-2012,1995 to 2012,0.943,0
+B6,Kelly Osbourne,Kelly Lee Osbourne,0.941,0
+B6,Gary Johnson,Gary Earl Johnson,0.911,0
+B6,Marika Green,Marika Nicolette Green,0.901,0
+B6,Gary Johnson,Gary Earl Johnson,0.911,0
+B3,Marika Green,Marika Nicolette Green,0.901,0
+B3,Gary Johnson,Gary Earl Johnson,0.911,0
+B3,Ronald Reagan,Ronald Wilson Reagan,0.928,0
+B3,1995-2012,1995 to 2012,0.943,0
+B6,Marika Green,Marika Nicolette Green,0.901,0
+B3,Marika Green,Marika Nicolette Green,0.901,0
+B3,Ronald Reagan,Ronald Wilson Reagan,0.928,0
+B6,French and English,"French, English and Spanish",0.912,0
+B6,Sean Payton,Patrick Sean Payton,0.942,0
+B6,Kentucky Fried Chicken,Kentucky Fried Chicken (KFC),0.919,0
+B6,Ronald Reagan,Ronald Wilson Reagan,0.928,0
+B3,Gary Johnson,Gary Earl Johnson,0.911,0
+B6,1995-2012,1995 to 2012,0.943,0
+B3,Kentucky Fried Chicken,Kentucky Fried Chicken (KFC),0.919,0
+B6,Human Drama,Human Drama,1.0,1
+B6,Bo Welch,"Robert W. ""Bo"" Welch III",0.831,0
+B3,Marco Fu,Marco Fu,1.0,1
+B3,Albert Park,Albert Park,1.0,1
+B6,Kegeyli rayonı,Kegeyli rayonı,1.0,1
+B6,Jack Kilby,Jack Kilby,1.0,1
+B6,Battle of Fredericksburg,Battle of Fredericksburg,1.0,1
+B6,Pittsburgh,Pittsburgh,1.0,1
+B3,Indooroopilly Shopping Centre,Indooroopilly Shopping Centre,1.0,1
+B3,Celtic,Celtic,1.0,1
+B6,25 December 1941,25 December 1941,1.0,1
+B6,Candice Swanepoel,Candice Susan Swanepoel,0.845,0
+B3,Toppers Pizza,Toppers Pizza,1.0,1
+B6,Dr. Brewster M. Higley,Dr. Brewster M. Higley,1.0,1
+B6,Paul Mercurio,Paul Joseph Mercurio,0.891,0
+B6,Northern mockingbird,northern mockingbird,1.0,1
+B6,Overijssel,Overijssel,1.0,1
+B6,Godspell,Godspell,1.0,1
+B3,The Pentagon,Pentagon,1.0,1
+B6,Bo Welch,"Robert W. ""Bo"" Welch III",0.831,0
+B6,1986,1986,1.0,1
+B6,Washington,"Washington, D.C.",0.802,0
+B6,Euryanthe,Euryanthe,1.0,1
+B3,Bangalore University,Bangalore University,1.0,1
+B3,1500 metres,1500 metres,1.0,1
+B6,Château d'Hérouville,Château d'Hérouville,1.0,1
+B3,Battle of Fredericksburg,Battle of Fredericksburg,1.0,1
+B6,Umberto II,Umberto II,1.0,1
+B6,six,six,1.0,1
+B3,Tennessee,Tennessee,1.0,1
+B3,Dave Bautista,David Michael Bautista Jr.,0.857,0
+B6,Muppet Treasure Island,Muppet Treasure Island,1.0,1
+B6,Northern mockingbird,northern mockingbird,1.0,1
+B3,"200,000","200,000",1.0,1
+B3,1898,1898,1.0,1
+B6,yes,yes,1.0,1
+B3,Song Il-gon,Song Il-gon,1.0,1
+B6,no,no,1.0,1
+B3,1948,1 December 1948,0.83,0
+B3,25 December 1941,25 December 1941,1.0,1
