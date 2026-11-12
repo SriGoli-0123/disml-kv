@@ -157,7 +157,7 @@ def run_task(task: dict) -> list[dict]:
                          "publish_tokens": s.publish_tokens, "publish_pct": pub_pct, "net_cached_pct": s.cached_pct - pub_pct,
                          "recomputed_per_req": (s.recomputed_tokens + s.publish_tokens) / max(1, s.requests),
                          "evictions": s.evictions, "stalls": s.stalls, "unauthorized_hits": s.unauthorized_hits,
-                         "mean_inflight": s.mean_inflight, "pinned_blocks_max": s.max_pinned_blocks,
+                         "mean_inflight": s.mean_inflight, "pinned_blocks_max": s.max_pinned_blocks, "pin_breaks": s.pin_breaks,
                          "weights_gib": "" if wg is None else round(wg, 3),
                          "shared_docs_per_req": shared_docs, **_order_stats(prompts)})
         if task.get("placement"):

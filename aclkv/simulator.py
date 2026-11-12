@@ -369,6 +369,7 @@ class SimSummary:
     publish_tokens: int = 0               # tokens prefilled by the catalog publisher (not by requests)
     publishes: int = 0
     max_pinned_blocks: int = 0
+    pin_breaks: int = 0
     extra: dict = field(default_factory=dict)
 
     def to_json(self) -> dict:
@@ -422,6 +423,7 @@ class PrefixCacheSimulator:
         self.publish_tokens = 0
         self.publishes = 0
         self.max_pinned = 0
+        self.pin_breaks = 0                         # pinned blocks released so an oversized request could run
         self.in_flight: deque[tuple[str, list[int]]] = deque()
         self.records: list[SimRecord] = []
         self._seen_hashes: set[bytes] = set()
@@ -633,6 +635,17 @@ class PrefixCacheSimulator:
             self._retire_oldest()
             stalls += 1
             evictable_hits = sum(1 for bid in hits if self.blocks[bid].ref_cnt == 0)
+        # hard-pinned catalog blocks give way (deepest first) only if the request cannot run otherwise
+        for h in reversed(list(self.pinned)):
+            if len(self.free) - evictable_hits >= need:
+                break
+            bid = self.pinned.pop(h)
+            b = self.blocks[bid]
+            b.ref_cnt -= 1
+            if b.ref_cnt == 0:
+                self.free.append(bid)
+            self.pin_breaks += 1
+            evictable_hits = sum(1 for bid in hits if self.blocks[bid].ref_cnt == 0)
         if len(self.free) - evictable_hits < need:
             raise RuntimeError(f"KV budget of {self.num_blocks} blocks cannot hold one request ({need} blocks)")
 
@@ -734,6 +747,7 @@ class PrefixCacheSimulator:
             publish_tokens=self.publish_tokens,
             publishes=self.publishes,
             max_pinned_blocks=self.max_pinned,
+            pin_breaks=self.pin_breaks,
         )
 
 

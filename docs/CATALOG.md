@@ -117,3 +117,10 @@ No catalog setting meets both the efficiency and the capacity rule below on the 
   `python scripts/analyze_catalog.py test`.
 
 Expected from the dev seed: FAIL on rules 1–2.
+
+**Deviation log.** The first test run crashed before writing any results: on `mq_main_s3` one
+request needs 403 KV blocks, but at 7B / 0.5 GiB the descriptive hard-pin setting had pinned half of
+the 585 blocks (its reserve was sized from the largest request seen so far). Fix (commit after
+435c8cc): if a request cannot fit even after every running request has finished, hard-pinned blocks
+are released, deepest first, and counted as `pin_breaks`. This only changes hard pinning; the
+candidate (soft pins), the baselines and the rules above are unchanged. No test result had been seen.

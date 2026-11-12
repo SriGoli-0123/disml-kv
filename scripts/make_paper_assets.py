@@ -157,8 +157,8 @@ if PRIV:
     prow = [("Global", "Global sharing (insecure)"), ("PerUser", "Per-user salt"), ("Divergence", "Divergence salt"),
             ("Binary", "Public/private split"), ("B3", "ACL scopes, inherited query (v1)"),
             ("ACLScope", "ACL scopes"), ("ACLScope+Tree", "ACL scopes + tree order"),
-            ("acl_scope/tree:k=2", r"\textsc{AclKV}, $k{=}2$"), ("ACLKV", r"\textsc{AclKV}, $k{=}3$"),
-            ("acl_scope/tree:k=5", r"\textsc{AclKV}, $k{=}5$"), ("acl_scope/tree:k=10", r"\textsc{AclKV}, $k{=}10$")]
+            ("acl_scope/ktree:k=2", r"\textsc{AclKV}, $k{=}2$"), ("ACLKV", r"\textsc{AclKV}, $k{=}3$"),
+            ("acl_scope/ktree:k=5", r"\textsc{AclKV}, $k{=}5$"), ("acl_scope/ktree:k=10", r"\textsc{AclKV}, $k{=}10$")]
     lines = [r"\begin{tabular}{@{}l r r r r r r@{}}", r"\toprule",
              r" & \multicolumn{4}{c}{HotpotQA insider probes (\%)} & MuSiQue & Cached \\ \cmidrule(lr){2-5}",
              r"Policy & reveal & single & anon$<$5 & query & single (\%) & (\%) \\", r"\midrule"]
@@ -174,15 +174,15 @@ if PRIV:
     num("singledBinary", 100 * priv("Binary", "singled_out"))
     num("queryRevealedVone", 100 * priv("B3", "query_revealed"))
     num("revealACLKV", 100 * priv("ACLKV", "revealed"))
-    num("revealKten", 100 * priv("acl_scope/tree:k=10", "revealed"))
+    num("revealKten", 100 * priv("acl_scope/ktree:k=10", "revealed"))
     num("anonLtFiveACLKV", 100 * priv("ACLKV", "anon_lt5"))
-    num("singledKtwo", 100 * priv("acl_scope/tree:k=2", "singled_out"))
+    num("singledKtwo", 100 * priv("acl_scope/ktree:k=2", "singled_out"))
     num("bypassGlobal", sum(f(r["bypass_hits"]) for r in PRIV if r["policy"] == "Global" and r["workload"] in HQ), "{:,.0f}")
     num("nProbes", sum(f(r["probes"]) for r in PRIV if r["policy"] == "ACLKV" and r["workload"] in HQ), "{:,.0f}")
     num("minAnonACLKV", min(f(r["min_anon_observed"]) for r in PRIV if r["policy"] == "ACLKV"), "{:.0f}")
 
     fig, ax = plt.subplots(figsize=(3.15, 2.25))
-    ks = [("ACLScope+Tree", 1), ("acl_scope/tree:k=2", 2), ("ACLKV", 3), ("acl_scope/tree:k=5", 5), ("acl_scope/tree:k=10", 10)]
+    ks = [("ACLScope+Tree", 1), ("acl_scope/ktree:k=2", 2), ("ACLKV", 3), ("acl_scope/ktree:k=5", 5), ("acl_scope/ktree:k=10", 10)]
     xs = [100 * priv(p, "revealed") for p, _ in ks]
     ys = [priv(p, "honest_cached_pct") for p, _ in ks]
     ax.plot(xs, ys, "-o", color=ENT["ACLKV"], zorder=3, label=r"ACL scopes + $k$-anonymous promotion")
@@ -301,6 +301,7 @@ if AB:
     num("ordLCR", om("order=lcr"), "{:.2f}")
     num("ordBsix", om("order=reuse_aware+anchor(v1 B6)"), "{:.2f}")
     num("ordTreeK", om("order=tree,k=3"), "{:.2f}")
+    num("ordKTreeK", om("order=k-gated-tree,k=3"), "{:.2f}")      # ACLKV's order since the catalog branch
     num("ordPrivTreeK", om("order=privacy-aware-tree,k=3"), "{:.2f}")
     num("goldMidRetrieval", om("order=retrieval", "gold_in_middle_pct"))
     num("goldMidLCR", om("order=lcr", "gold_in_middle_pct"))
@@ -308,7 +309,7 @@ if AB:
     num("topEdgeTree", om("order=tree", "top1_at_edge_pct"))
     tail = {(r["policy"], r["workload"]): f(r["cached_pct"]) for r in AB if r["variant"].startswith("tail=")}
     pairs = [("ACLScope", "acl_scope/retrieval:tail=inherit"), ("ACLScope+Tree", "acl_scope/tree:tail=inherit"),
-             ("ACLKV", "acl_scope/tree:k=3,tail=inherit")]
+             ("ACLKV", "acl_scope/ktree:k=3,tail=inherit")]
     diffs = [tail[(b, w)] - tail[(a, w)] for a, b in pairs for (p, w) in tail if p == a and (b, w) in tail]
     num("tailCostMax", max(diffs), "{:.2f}")
     al = {r["policy"] + r["variant"]: f(r["cached_pct"]) for r in AB if r["variant"].startswith("align=")}

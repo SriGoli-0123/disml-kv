@@ -293,3 +293,18 @@ def test_soft_and_unpinned_catalogs_also_need_k_served_requesters():
         shared[pin] = [s.shared for s in ps[-1].segments if s.name == "doc"]
     assert shared["hard"] == [True, True]
     assert shared["soft"] == shared["none"] == [False, False]
+
+
+def test_hard_pins_give_way_when_a_request_cannot_fit_otherwise():
+    b = builder()
+    pa = b.build("a", "alice", LONG_Q, [rd("a", 0), rd("b", 1)], get_policy("ACLScope"))
+    n_doc = pa.segments[-1].start // 16
+    hs = prompt_block_hashes(pa, 16)[:n_doc]
+    big = b.build("x", "bob", LONG_Q, [rd(f"x{i}", i, words=60) for i in range(6)], get_policy("ACLScope"))
+    need = -(-(big.num_tokens + 16) // 16)
+    sim = PrefixCacheSimulator(need + n_doc - 6, D, 16, 2, 16)   # < need free blocks even after the preamble hits
+    sim.set_pinned([(h, pa.acl_at(i * 16 + 15)) for i, h in enumerate(hs)])
+    r = sim.process(big)                        # would raise without releasing pins
+    assert r.new_blocks + r.hit_blocks == need and 0 < sim.pin_breaks <= n_doc   # shares the preamble
+    assert sim.summary().pin_breaks == sim.pin_breaks
+    assert all(sim.blocks[bid].ref_cnt >= 1 for bid in sim.pinned.values())
