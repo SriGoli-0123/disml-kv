@@ -28,8 +28,14 @@ assert eps, "aclkv plugin entry point missing (pip install -e . again?)"
 print("ok:", eps[0])
 PY
 
-echo "--- preparing data + workloads (HotpotQA download ~27MB)"
+echo "--- preparing data + workloads (HotpotQA ~27MB, MuSiQue ~11MB)"
 cd "$REPO_ROOT"
+# v1 (synthetic-injection) data, kept so the committed v1 results stay reproducible
 python scripts/prepare_data.py --max-questions 3000 --tokenizer Qwen/Qwen2.5-7B-Instruct
 python scripts/gen_workloads.py
-echo "setup complete. Next: bash scripts/start_vllm.sh 2   (in one shell)  then  python scripts/smoke_test_plugin.py"
+# v2: full HotpotQA dev + MuSiQue-Ans dev, retrieval-driven multi-tenant workloads
+python scripts/prepare_data.py --dataset hotpotqa --max-questions 0 --out-dir data/prepared_hotpotqa_full
+python scripts/prepare_data.py --dataset musique --max-questions 0
+python scripts/gen_workloads_v2.py
+python scripts/make_manifest.py
+echo "setup complete. v2 GPU matrix: sbatch --array=0-7 scripts/sol_array.sbatch   (see README section 3)"

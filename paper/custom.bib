@@ -1,0 +1,312 @@
+% =====================================================================
+% Bibliography for the AclKV paper.
+% Conventions:
+%   - Entries without a comment were verified against the source page in
+%     Oct 2026 (arXiv abstract / GitHub) or are long-established venue papers.
+%   - "% VERIFY" marks entries whose bibliographic details (author list,
+%     venue, year) must be checked before submission.
+%   - author = {TODO ...} marks true placeholders.
+% =====================================================================
+
+% ---------------------------------------------------------------- serving systems
+@inproceedings{kwon2023vllm,
+  title     = {Efficient Memory Management for Large Language Model Serving with {PagedAttention}},
+  author    = {Kwon, Woosuk and Li, Zhuohan and Zhuang, Siyuan and Sheng, Ying and Zheng, Lianmin and Yu, Cody Hao and Gonzalez, Joseph E. and Zhang, Hao and Stoica, Ion},
+  booktitle = {Proceedings of the 29th Symposium on Operating Systems Principles (SOSP)},
+  year      = {2023}
+}
+
+@misc{vllm2026apc,
+  title        = {Automatic Prefix Caching},
+  author       = {{vLLM Project}},
+  year         = {2026},
+  howpublished = {vLLM documentation, v0.29.0},
+  url          = {https://docs.vllm.ai/en/v0.29.0/design/prefix_caching/}
+}
+
+@misc{vllm2026security,
+  title        = {Security: Prefix Cache Timing Side-Channel Mitigation (Cache Salting)},
+  author       = {{vLLM Project}},
+  year         = {2026},
+  howpublished = {vLLM documentation, v0.29.0},
+  url          = {https://docs.vllm.ai/en/v0.29.0/usage/security/}
+}
+
+@misc{vllm2025rfc,
+  title        = {{RFC}: Cache Salting for Secure and Flexible Prefix Caching in {vLLM}},
+  author       = {{vLLM Project}},
+  year         = {2025},
+  howpublished = {GitHub issue \#16016},
+  url          = {https://github.com/vllm-project/vllm/issues/16016}
+}
+
+@misc{vllm2026saltregions,
+  title        = {Per-token-range cache salts (\texttt{salt\_regions})},
+  author       = {{vLLM Project}},
+  year         = {2026},
+  howpublished = {GitHub pull request \#52655 (open as of October 2026)},
+  url          = {https://github.com/vllm-project/vllm/pull/52655}
+}
+
+@misc{vllm2026dos,
+  title        = {{vLLM} {DoS} via unbounded \texttt{cache\_salt} length},
+  author       = {{vLLM Project}},
+  year         = {2026},
+  howpublished = {GitHub Security Advisory GHSA-wpww-v874-ph2p}
+}
+
+@inproceedings{zheng2024sglang,
+  title     = {{SGLang}: Efficient Execution of Structured Language Model Programs},
+  author    = {Zheng, Lianmin and Yin, Liangsheng and Xie, Zhiqiang and Sun, Chuyue and Huang, Jeff and Yu, Cody Hao and Cao, Shiyi and Kozyrakis, Christos and Stoica, Ion and Gonzalez, Joseph E. and Barrett, Clark and Sheng, Ying},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2024}
+}
+
+@inproceedings{gim2024promptcache,
+  title     = {Prompt Cache: Modular Attention Reuse for Low-Latency Inference},
+  author    = {Gim, In and Chen, Guojun and Lee, Seung-seob and Sarda, Nikhil and Khandelwal, Anurag and Zhong, Lin},
+  booktitle = {Proceedings of Machine Learning and Systems (MLSys)},
+  year      = {2024}
+}
+
+% ---------------------------------------------------------------- RAG caching
+% VERIFY
+@article{jin2024ragcache,
+  title   = {{RAGCache}: Efficient Knowledge Caching for Retrieval-Augmented Generation},
+  author  = {Jin, Chao and Zhang, Zili and Jiang, Xuanlin and Liu, Fangyue and Liu, Xin and Liu, Xuanzhe and Jin, Xin},
+  journal = {arXiv preprint arXiv:2404.12457},
+  year    = {2024}
+}
+
+@inproceedings{yao2025cacheblend,
+  title     = {{CacheBlend}: Fast Large Language Model Serving for {RAG} with Cached Knowledge Fusion},
+  author    = {Yao, Jiayi and Li, Hanchen and Liu, Yuhan and Ray, Siddhant and Cheng, Yihua and Zhang, Qizheng and Du, Kuntai and Lu, Shan and Jiang, Junchen},
+  booktitle = {Proceedings of the European Conference on Computer Systems (EuroSys)},
+  year      = {2025}
+}
+
+% VERIFY
+@article{lu2024turborag,
+  title   = {{TurboRAG}: Accelerating Retrieval-Augmented Generation with Precomputed {KV} Caches for Chunked Text},
+  author  = {Lu, Songshuo and Wang, Hua and Rong, Yutian and Chen, Zhi and Tang, Yaohua},
+  journal = {arXiv preprint arXiv:2410.07590},
+  year    = {2024}
+}
+
+% VERIFY
+@article{sun2024blockattention,
+  title   = {Block-Attention for Efficient Prefilling},
+  author  = {Sun, East and Wang, Yan and Tian, Lan},
+  journal = {arXiv preprint arXiv:2409.15355},
+  year    = {2024}
+}
+
+@article{tan2026cacheweaver,
+  title   = {{CacheWeaver}: Cache-Aware Evidence Ordering for Efficient Grounded {RAG} Inference},
+  author  = {Tan, Kaizhen and Gu, Rong and Li, Mingyuan},
+  journal = {arXiv preprint arXiv:2606.19667},
+  year    = {2026}
+}
+
+% ---------------------------------------------------------------- side channels & defences
+% VERIFY
+@inproceedings{wu2025promptpeek,
+  title     = {I Know What You Asked: Prompt Leakage via {KV}-Cache Sharing in Multi-Tenant {LLM} Serving},
+  author    = {Wu, Guanlong and Zhang, Zheng and Zhang, Yao and Wang, Weili and Niu, Jianyu and Wu, Ye and Zhang, Yinqian},
+  booktitle = {Network and Distributed System Security Symposium (NDSS)},
+  year      = {2025}
+}
+
+% VERIFY
+@article{zheng2024inputsnatch,
+  title   = {{InputSnatch}: Stealing Input in {LLM} Services via Timing Side-Channel Attacks},
+  author  = {Zheng, Xinyao and Han, Husheng and Shi, Shangyi and Fang, Qiyan and Du, Zidong and Hu, Xing and Guo, Qi},
+  journal = {arXiv preprint arXiv:2411.18191},
+  year    = {2024}
+}
+
+% VERIFY
+@article{song2024earlybird,
+  title   = {The Early Bird Catches the Leak: Unveiling Timing Side Channels in {LLM} Serving Systems},
+  author  = {Song, Linke and Pang, Zixuan and Wang, Wenhao and Wang, Zihao and Wang, XiaoFeng and Chen, Hongbo and Song, Wei and Jin, Yier and Meng, Dan and Hou, Rui},
+  journal = {arXiv preprint arXiv:2409.20002},
+  year    = {2024}
+}
+
+% VERIFY
+@inproceedings{gu2025audit,
+  title     = {Auditing Prompt Caching in Language Model {APIs}},
+  author    = {Gu, Chenchen and Li, Xiang Lisa and Kuditipudi, Rohith and Liang, Percy and Hashimoto, Tatsunori},
+  booktitle = {Proceedings of the International Conference on Machine Learning (ICML)},
+  year      = {2025}
+}
+
+@article{sun2026spliceleak,
+  title   = {Agent-Assisted Side-Channel Attacks on Non-Prefix {KV} Cache in {RAG}},
+  author  = {Sun, He and Liu, Shinan and Ma, Siyuan and Li, Junhao and Xiao, Mingjun and Jiang, Wenhao},
+  journal = {arXiv preprint arXiv:2606.21842},
+  year    = {2026}
+}
+
+@article{addagada2026kvgov,
+  title   = {Governing the {KV} Cache: Preventing Timing Side-Channel Leakage in Multi-Tenant {LLM} Inference},
+  author  = {Addagada, Tejasvi C.},
+  journal = {arXiv preprint arXiv:2608.09225},
+  year    = {2026}
+}
+
+@article{chu2025safekv,
+  title   = {Selective {KV}-Cache Sharing to Mitigate Timing Side-Channels in {LLM} Inference},
+  author  = {Chu, Kexin and others},
+  journal = {arXiv preprint arXiv:2508.08438},
+  year    = {2025}
+}
+
+@article{wu2026cacheprune,
+  title   = {{CachePrune}: Privacy-Aware and Fine-Grained {KV} Cache Sharing for Efficient {LLM} Inference},
+  author  = {Wu, Guanlong and Li, Zhaohan and Zhang, Yao and Zhang, Zheng and Niu, Jianyu and Wu, Ye and Zhang, Yinqian},
+  journal = {arXiv preprint arXiv:2605.23640},
+  year    = {2026}
+}
+
+@article{pennas2026prefixwall,
+  title   = {{PrefixWall}: Mitigating Prefix Caching Side Channels in Shared {LLM} Systems},
+  author  = {Pennas, Panagiotis Georgios and Papaioannou, Konstantinos and Guarnieri, Marco and Doudali, Thaleia Dimitra},
+  journal = {arXiv preprint arXiv:2603.10726},
+  year    = {2026}
+}
+
+@article{prefixshield2026,
+  title   = {Preserving Admission Responsibility in Multi-Tenant Large Language Model Prefix Caches},
+  author  = {TODO},
+  journal = {arXiv preprint arXiv:2608.01657},
+  year    = {2026}
+}
+
+@article{keypooling2026,
+  title   = {{KeyPooling}: Measuring Where {LLM} {API} Relay Paths Collapse Prompt Cache Isolation},
+  author  = {TODO},
+  journal = {arXiv preprint arXiv:2608.17485},
+  year    = {2026}
+}
+
+@article{edgestandard2026,
+  title   = {Separating Intelligence from Inference: A Standard for Edge-Native {AI} Computing},
+  author  = {TODO},
+  journal = {arXiv preprint arXiv:2608.02608},
+  year    = {2026}
+}
+
+@misc{cachesolidarity,
+  title  = {{CacheSolidarity}: owner-tagged {KV}-cache sharing},
+  author = {TODO},
+  year   = {2026}
+}
+
+@inproceedings{ndss2026kvprivacy,
+  title     = {Unveiling and Mitigating Privacy Risks of {KV}-cache in {LLM} Inference},
+  author    = {TODO},
+  booktitle = {Network and Distributed System Security Symposium (NDSS)},
+  year      = {2026}
+}
+
+% ---------------------------------------------------------------- RAG, retrieval, datasets, models
+@inproceedings{lewis2020rag,
+  title     = {Retrieval-Augmented Generation for Knowledge-Intensive {NLP} Tasks},
+  author    = {Lewis, Patrick and Perez, Ethan and Piktus, Aleksandra and Petroni, Fabio and Karpukhin, Vladimir and Goyal, Naman and K{\"u}ttler, Heinrich and Lewis, Mike and Yih, Wen-tau and Rockt{\"a}schel, Tim and Riedel, Sebastian and Kiela, Douwe},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2020}
+}
+
+@article{liu2024lost,
+  title   = {Lost in the Middle: How Language Models Use Long Contexts},
+  author  = {Liu, Nelson F. and Lin, Kevin and Hewitt, John and Paranjape, Ashwin and Bevilacqua, Michele and Petroni, Fabio and Liang, Percy},
+  journal = {Transactions of the Association for Computational Linguistics},
+  volume  = {12},
+  pages   = {157--173},
+  year    = {2024}
+}
+
+@misc{langchain2023lcr,
+  title        = {{LongContextReorder} document transformer},
+  author       = {{LangChain}},
+  year         = {2023},
+  howpublished = {\texttt{langchain\_community.document\_transformers}},
+  url          = {https://python.langchain.com/docs/how_to/long_context_reorder}
+}
+
+@inproceedings{yang2018hotpotqa,
+  title     = {{HotpotQA}: A Dataset for Diverse, Explainable Multi-hop Question Answering},
+  author    = {Yang, Zhilin and Qi, Peng and Zhang, Saizheng and Bengio, Yoshua and Cohen, William and Salakhutdinov, Ruslan and Manning, Christopher D.},
+  booktitle = {Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing},
+  pages     = {2369--2380},
+  year      = {2018}
+}
+
+@article{trivedi2022musique,
+  title   = {{MuSiQue}: Multihop Questions via Single-hop Question Composition},
+  author  = {Trivedi, Harsh and Balasubramanian, Niranjan and Khot, Tushar and Sabharwal, Ashish},
+  journal = {Transactions of the Association for Computational Linguistics},
+  volume  = {10},
+  pages   = {539--554},
+  year    = {2022}
+}
+
+@article{robertson2009bm25,
+  title   = {The Probabilistic Relevance Framework: {BM25} and Beyond},
+  author  = {Robertson, Stephen and Zaragoza, Hugo},
+  journal = {Foundations and Trends in Information Retrieval},
+  volume  = {3},
+  number  = {4},
+  pages   = {333--389},
+  year    = {2009}
+}
+
+% VERIFY
+@article{xiao2023bge,
+  title   = {{C-Pack}: Packaged Resources To Advance General {C}hinese Embedding},
+  author  = {Xiao, Shitao and Liu, Zheng and Zhang, Peitian and Muennighoff, Niklas},
+  journal = {arXiv preprint arXiv:2309.07597},
+  year    = {2023}
+}
+
+@inproceedings{cormack2009rrf,
+  title     = {Reciprocal Rank Fusion Outperforms {C}ondorcet and Individual Rank Learning Methods},
+  author    = {Cormack, Gordon V. and Clarke, Charles L. A. and Buettcher, Stefan},
+  booktitle = {Proceedings of the 32nd International ACM SIGIR Conference on Research and Development in Information Retrieval},
+  pages     = {758--759},
+  year      = {2009}
+}
+
+@article{sweeney2002kanon,
+  title   = {k-Anonymity: A Model for Protecting Privacy},
+  author  = {Sweeney, Latanya},
+  journal = {International Journal of Uncertainty, Fuzziness and Knowledge-Based Systems},
+  volume  = {10},
+  number  = {5},
+  pages   = {557--570},
+  year    = {2002}
+}
+
+@inproceedings{douceur2002sybil,
+  title     = {The {S}ybil Attack},
+  author    = {Douceur, John R.},
+  booktitle = {Peer-to-Peer Systems: First International Workshop (IPTPS)},
+  pages     = {251--260},
+  year      = {2002}
+}
+
+% VERIFY
+@article{qwen2025qwen25,
+  title   = {{Qwen2.5} Technical Report},
+  author  = {{Qwen Team}},
+  journal = {arXiv preprint arXiv:2412.15115},
+  year    = {2024}
+}
+
+@article{permissionrag2025,
+  title   = {TODO: permission-aware / access-controlled retrieval for enterprise {RAG}},
+  author  = {TODO},
+  journal = {TODO},
+  year    = {2025}
+}

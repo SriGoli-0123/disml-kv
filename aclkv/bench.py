@@ -61,14 +61,53 @@ async def run_closed_loop(client: VLLMClient, session: httpx.AsyncClient, prompt
     return [results[p.req_id] for p in prompts], wall
 
 
-def summarize_run(prompts: list[BuiltPrompt], results: list[CompletionResult], wall: float) -> dict:
+async def run_open_loop(client: VLLMClient, session: httpx.AsyncClient, prompts: list[BuiltPrompt],
+                        rate: float, max_tokens: int, seed: int = 0, progress: bool = True
+                        ) -> tuple[list[CompletionResult], float]:
+    """Open-loop Poisson arrivals at ``rate`` requests/s: each request is sent at
+    its scheduled time regardless of whether earlier ones finished, so queueing
+    delay shows up in TTFT exactly as it would for independent users."""
+    import random as _random
+
+    rng = _random.Random(seed)
+    t, sched = 0.0, []
+    for _ in prompts:
+        t += rng.expovariate(rate)
+        sched.append(t)
+    results: dict[str, CompletionResult] = {}
+    done = 0
+    t0 = time.perf_counter()
+
+    async def one(p: BuiltPrompt, at: float):
+        nonlocal done
+        delay = at - (time.perf_counter() - t0)
+        if delay > 0:
+            await asyncio.sleep(delay)
+        results[p.req_id] = await client.complete(session, p.req_id, p.token_ids, p.cache_salt, max_tokens=max_tokens)
+        done += 1
+        if progress and done % 100 == 0:
+            print(f"    {done}/{len(prompts)} done", flush=True)
+
+    await asyncio.gather(*[one(p, at) for p, at in zip(prompts, sched)])
+    wall = time.perf_counter() - t0
+    return [results[p.req_id] for p in prompts], wall
+
+
+def summarize_run(prompts: list[BuiltPrompt], results: list[CompletionResult], wall: float,
+                  slo_ttft_s: float | None = None) -> dict:
     ok = [r for r in results if r.ok]
     pt = sum(r.prompt_tokens or 0 for r in ok)
     ct = sum(r.cached_tokens or 0 for r in ok)
     gen = sum(r.completion_tokens or 0 for r in ok)
     by_id = {p.req_id: p for p in prompts}
-    qa = evaluate((r.text, by_id[r.req_id].meta.get("answer", "")) for r in ok)
+    qa = evaluate((r.text, by_id[r.req_id].meta.get("answers") or by_id[r.req_id].meta.get("answer", "")) for r in ok)
+    goodput = None
+    if slo_ttft_s is not None:
+        good = sum(1 for r in ok if r.ttft_s is not None and r.ttft_s <= slo_ttft_s)
+        goodput = {"slo_ttft_s": slo_ttft_s, "attained": good / max(1, len(results)),
+                   "goodput_req_per_s": good / wall if wall > 0 else float("nan")}
     return {
+        "goodput": goodput,
         "requests": len(results),
         "ok": len(ok),
         "errors": len(results) - len(ok),
@@ -99,10 +138,16 @@ async def bench_policy(args, client: VLLMClient, session: httpx.AsyncClient, wor
             print("  WARNING: /reset_prefix_cache failed (start server with VLLM_SERVER_DEV_MODE=1); results may carry over", flush=True)
         await asyncio.sleep(0.5)
     m_before = await client.metrics(session)
-    print(f"  [{pol.name}] {pol.description}: {len(prompts)} requests, concurrency={args.concurrency}", flush=True)
-    results, wall = await run_closed_loop(client, session, prompts, args.concurrency, args.max_tokens)
+    if args.arrival == "poisson":
+        print(f"  [{pol.name}] {pol.description}: {len(prompts)} requests, Poisson rate={args.rate}/s", flush=True)
+        results, wall = await run_open_loop(client, session, prompts, args.rate, args.max_tokens, seed=args.seed)
+    else:
+        print(f"  [{pol.name}] {pol.description}: {len(prompts)} requests, concurrency={args.concurrency}", flush=True)
+        results, wall = await run_closed_loop(client, session, prompts, args.concurrency, args.max_tokens)
     m_after = await client.metrics(session)
-    summary = summarize_run(prompts, results, wall)
+    summary = summarize_run(prompts, results, wall, slo_ttft_s=(args.slo_ttft_ms / 1000.0) if args.slo_ttft_ms else None)
+    if args.judge_url and args.judge_model:
+        summary["judge"] = await judge_run(session, args, prompts, results)
     summary["prom_delta"] = counter_delta(m_before, m_after)
     summary["n_dropped_by_filter"] = n_dropped
 
@@ -129,10 +174,37 @@ async def bench_policy(args, client: VLLMClient, session: httpx.AsyncClient, wor
         "simulator": sim,
         "records": [
             {**r.to_json(), "user": p.user, "qid": p.meta.get("qid"), "answer": p.meta.get("answer"),
-             "num_tokens_sent": p.num_tokens, "cache_salt": p.cache_salt, "ordered_chunk_ids": p.ordered_chunk_ids}
+             "answers": p.meta.get("answers"), "gold": p.meta.get("gold"),
+             "num_tokens_sent": p.num_tokens, "cache_salt": p.cache_salt, "ordered_chunk_ids": p.ordered_chunk_ids,
+             "n_shared_docs": p.meta.get("n_shared_docs")}
             for p, r in zip(prompts, results)
         ],
     }
+
+
+async def judge_run(session, args, prompts, results) -> dict:
+    """Fixed-rubric LLM judge (semantic correctness), bounded concurrency."""
+    from .qa_eval import llm_judge
+
+    by_id = {p.req_id: p for p in prompts}
+    sem = asyncio.Semaphore(args.judge_concurrency)
+    verdicts: dict[str, bool | None] = {}
+
+    async def one(r):
+        p = by_id[r.req_id]
+        async with sem:
+            verdicts[r.req_id] = await llm_judge(session, args.judge_url, args.judge_model, p.meta.get("question", ""),
+                                                 p.meta.get("answer", ""), r.text)
+
+    await asyncio.gather(*[one(r) for r in results if r.ok])
+    vals = [v for v in verdicts.values() if v is not None]
+    return {"n": len(vals), "accuracy": (sum(vals) / len(vals)) if vals else None,
+            "failed": sum(1 for v in verdicts.values() if v is None), "per_request": verdicts}
+
+
+def out_name(args, pol_slug: str) -> str:
+    load = f"r{args.rate:g}" if args.arrival == "poisson" else f"c{args.concurrency}"
+    return f"{args.tag + '_' if args.tag else ''}{Path(args.workload).stem}_{load}_kv{args.kv_gib}_{pol_slug}.json"
 
 
 async def amain(args) -> None:
@@ -148,11 +220,13 @@ async def amain(args) -> None:
 
     needed_policies = []
     for pol in args.policies:
-        prefix = f"{args.tag + '_' if args.tag else ''}{Path(args.workload).stem}_c{args.concurrency}_"
+        slug = get_policy(pol).slug
+        load = f"r{args.rate:g}" if args.arrival == "poisson" else f"c{args.concurrency}"
+        prefix = f"{args.tag + '_' if args.tag else ''}{Path(args.workload).stem}_{load}_"
         candidates = [
-            out_dir / f"{prefix}kv{args.kv_gib}_{pol}.json",
-            out_dir / f"{prefix}kv{float(args.kv_gib):.1f}_{pol}.json" if args.kv_gib is not None else None,
-            out_dir / f"{prefix}kv{int(args.kv_gib)}_{pol}.json" if (args.kv_gib is not None and float(args.kv_gib).is_integer()) else None,
+            out_dir / f"{prefix}kv{args.kv_gib}_{slug}.json",
+            out_dir / f"{prefix}kv{float(args.kv_gib):.1f}_{slug}.json" if args.kv_gib is not None else None,
+            out_dir / f"{prefix}kv{int(args.kv_gib)}_{slug}.json" if (args.kv_gib is not None and float(args.kv_gib).is_integer()) else None,
         ]
         already_done = False
         if not getattr(args, "force", False):
@@ -197,7 +271,7 @@ async def amain(args) -> None:
         for pol in needed_policies:
             res = await bench_policy(args, client, session, workload, corpus, builder, settings, pol, num_blocks)
             res["server"] = {"model": model, "num_gpu_blocks": num_blocks, "cache_config": cc}
-            name = f"{args.tag + '_' if args.tag else ''}{Path(args.workload).stem}_c{args.concurrency}_kv{args.kv_gib}_{pol}.json"
+            name = out_name(args, get_policy(pol).slug)
             target_path = out_dir / name
             tmp_path = out_dir / f".tmp_{name}"
             with open(tmp_path, "w") as f:
@@ -210,7 +284,8 @@ def parse_args(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--workload", required=True)
     ap.add_argument("--corpus", default="data/prepared/corpus.jsonl")
-    ap.add_argument("--policies", nargs="+", default=["B0", "B1", "B2", "B3", "B4", "B5", "B6", "UB"])
+    ap.add_argument("--policies", nargs="+",
+                    default=["NoCache", "PerUser", "Divergence", "Binary", "ACLScope", "ACLScope+Tree", "ACLKV", "Global"])
     ap.add_argument("--base-url", default="http://localhost:8000")
     ap.add_argument("--model", default=None, help="served model name (default: first from /v1/models)")
     ap.add_argument("--tokenizer", default="Qwen/Qwen2.5-7B-Instruct")
@@ -231,6 +306,14 @@ def parse_args(argv=None):
     ap.add_argument("--out-dir", default="results/bench")
     ap.add_argument("--tag", default="")
     ap.add_argument("--force", action="store_true", default=False, help="force re-running benchmarks even if results already exist")
+    ap.add_argument("--arrival", default="closed", choices=["closed", "poisson"],
+                    help="closed: --concurrency workers; poisson: open-loop arrivals at --rate req/s")
+    ap.add_argument("--rate", type=float, default=8.0, help="Poisson arrival rate (req/s)")
+    ap.add_argument("--slo-ttft-ms", type=float, default=None, help="report goodput = requests meeting this TTFT")
+    ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--judge-url", default=None, help="OpenAI-compatible endpoint for the LLM judge")
+    ap.add_argument("--judge-model", default=None)
+    ap.add_argument("--judge-concurrency", type=int, default=16)
     return ap.parse_args(argv)
 
 

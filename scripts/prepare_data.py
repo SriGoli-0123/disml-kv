@@ -11,24 +11,29 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from aclkv.data_prep import HF_PARQUET_URL, build, download_hotpot, read_hotpot_parquet, save  # noqa: E402
+from aclkv.data_prep import DATASET_URLS, build_dataset, download_hotpot, read_hotpot_parquet, save  # noqa: E402
 from aclkv.tokenizer import load_tokenizer  # noqa: E402
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--raw", default="data/raw/hotpot_distractor_validation.parquet")
-    ap.add_argument("--url", default=HF_PARQUET_URL)
-    ap.add_argument("--out-dir", default="data/prepared")
-    ap.add_argument("--max-questions", type=int, default=3000, help="subsample questions (corpus = their paragraphs)")
+    ap.add_argument("--dataset", default="hotpotqa", choices=sorted(DATASET_URLS))
+    ap.add_argument("--raw", default=None, help="parquet path (default: data/raw/<dataset>_validation.parquet)")
+    ap.add_argument("--url", default=None)
+    ap.add_argument("--out-dir", default=None, help="default: data/prepared (hotpotqa) or data/prepared_<dataset>")
+    ap.add_argument("--max-questions", type=int, default=3000, help="subsample questions; 0 = all")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--tokenizer", default=None, help="if set, store token counts per chunk")
     args = ap.parse_args()
 
-    raw = download_hotpot(Path(args.raw), args.url)
-    rows = read_hotpot_parquet(raw, args.max_questions, args.seed)
+    raw_default = {"hotpotqa": "data/raw/hotpot_distractor_validation.parquet",
+                   "musique": "data/raw/musique_answerable_validation.parquet"}[args.dataset]
+    args.raw = args.raw or raw_default
+    args.out_dir = args.out_dir or ("data/prepared" if args.dataset == "hotpotqa" else f"data/prepared_{args.dataset}")
+    raw = download_hotpot(Path(args.raw), args.url or DATASET_URLS[args.dataset])
+    rows = read_hotpot_parquet(raw, args.max_questions or None, args.seed)
     tok = load_tokenizer(args.tokenizer) if args.tokenizer else None
-    chunks, questions = build(rows, tok)
+    chunks, questions = build_dataset(args.dataset, rows, tok)
     save(chunks, questions, Path(args.out_dir))
     n_tok = [c.n_tokens for c in chunks if c.n_tokens]
     stats = {

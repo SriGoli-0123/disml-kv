@@ -44,10 +44,17 @@ class Question:
     level: str
     gold_chunk_ids: list[str]
     context: list[dict] = field(default_factory=list)   # [{chunk_id, score, rank}] by relevance
+    answer_aliases: list[str] = field(default_factory=list)
+    dataset: str = "hotpotqa"
+
+    @property
+    def answers(self) -> list[str]:
+        return [self.answer] + [a for a in self.answer_aliases if a and a != self.answer]
 
     def to_json(self) -> dict:
         return {"qid": self.qid, "question": self.question, "answer": self.answer, "type": self.qtype,
-                "level": self.level, "gold_chunk_ids": self.gold_chunk_ids, "context": self.context}
+                "level": self.level, "gold_chunk_ids": self.gold_chunk_ids, "context": self.context,
+                "answer_aliases": self.answer_aliases, "dataset": self.dataset}
 
 
 def chunk_id_for(title: str, text: str) -> str:
@@ -55,18 +62,20 @@ def chunk_id_for(title: str, text: str) -> str:
 
 
 class BM25Index:
+    """Relevance scores for a candidate set (sparse BM25 over the whole corpus)."""
+
     def __init__(self, chunks: list[Chunk]):
-        from rank_bm25 import BM25Okapi
+        from .retrieval import SparseBM25
 
         self.ids = [c.chunk_id for c in chunks]
-        self.pos = {cid: i for i, cid in enumerate(self.ids)}
-        self._bm25 = BM25Okapi([simple_tokenize(c.title + " " + c.text) for c in chunks])
+        self._bm25 = SparseBM25(self.ids, [c.title + " " + c.text for c in chunks])
+
+    @property
+    def sparse(self):
+        return self._bm25
 
     def scores(self, question: str, chunk_ids: Iterable[str]) -> dict[str, float]:
-        q = simple_tokenize(question)
-        idx = [self.pos[c] for c in chunk_ids]
-        s = self._bm25.get_batch_scores(q, idx)
-        return {cid: float(v) for cid, v in zip(chunk_ids, s)}
+        return self._bm25.score_ids(question, list(chunk_ids))
 
 
 def download_hotpot(dest: Path, url: str = HF_PARQUET_URL) -> Path:
@@ -122,6 +131,52 @@ def build(rows: list[dict], tokenizer=None) -> tuple[list[Chunk], list[Question]
     return chunk_list, questions
 
 
+MUSIQUE_PARQUET_URL = "https://huggingface.co/api/datasets/bdsaglam/musique/parquet/answerable/validation/0.parquet"
+DATASET_URLS = {"hotpotqa": HF_PARQUET_URL, "musique": MUSIQUE_PARQUET_URL}
+
+
+def build_musique(rows: list[dict], tokenizer=None) -> tuple[list[Chunk], list[Question]]:
+    """MuSiQue-Ans (2-4 hop compositional questions, 20 paragraphs each)."""
+    chunks: dict[str, Chunk] = {}
+    questions: list[Question] = []
+    for r in rows:
+        if not r.get("answerable", True):
+            continue
+        ctx, golds = [], []
+        for p in r["paragraphs"]:
+            text = (p["paragraph_text"] or "").strip()
+            if not text:
+                continue
+            cid = chunk_id_for(p["title"], text)
+            if cid not in chunks:
+                chunks[cid] = Chunk(cid, p["title"], text, len(tokenizer.encode(text)) if tokenizer else 0)
+            ctx.append(cid)
+            if p["is_supporting"]:
+                golds.append(cid)
+        if len(golds) < 2:
+            continue
+        hops = r["id"].split("hop")[0] if "hop" in r["id"] else ""
+        questions.append(Question(r["id"], r["question"].strip(), r["answer"].strip(), f"{hops}hop", "",
+                                  golds, [{"chunk_id": c} for c in ctx],
+                                  answer_aliases=[a.strip() for a in (r.get("answer_aliases") or [])],
+                                  dataset="musique"))
+    chunk_list = list(chunks.values())
+    index = BM25Index(chunk_list)
+    for q in questions:
+        sc = index.scores(q.question, [c["chunk_id"] for c in q.context])
+        ordered = sorted(sc.items(), key=lambda kv: -kv[1])
+        q.context = [{"chunk_id": cid, "score": round(v, 4), "rank": i} for i, (cid, v) in enumerate(ordered)]
+    return chunk_list, questions
+
+
+def build_dataset(name: str, rows: list[dict], tokenizer=None) -> tuple[list[Chunk], list[Question]]:
+    if name == "hotpotqa":
+        return build(rows, tokenizer)
+    if name == "musique":
+        return build_musique(rows, tokenizer)
+    raise ValueError(f"unknown dataset {name!r}")
+
+
 def save(chunks: list[Chunk], questions: list[Question], out_dir: Path) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     with open(out_dir / "corpus.jsonl", "w") as f:
@@ -147,5 +202,6 @@ def load_questions(path: Path) -> list[Question]:
         for line in f:
             d = json.loads(line)
             out.append(Question(d["qid"], d["question"], d["answer"], d.get("type", ""), d.get("level", ""),
-                                d["gold_chunk_ids"], d["context"]))
+                                d["gold_chunk_ids"], d["context"], d.get("answer_aliases", []),
+                                d.get("dataset", "hotpotqa")))
     return out

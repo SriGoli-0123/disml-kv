@@ -130,3 +130,35 @@ class SemanticScorer:
             "sem_match": sum(match) / n,
             "sem_rescued": sum(rescued) / n,
         }
+
+
+    # -- answer aliases (v2: MuSiQue gold answers come with aliases) ---------------------
+    def similarity_multi(self, preds: Sequence[str], golds: Sequence[Sequence[str]]) -> list[float]:
+        """Like ``similarity``, but each prediction has a list of acceptable gold
+        answers; the best-matching alias counts.  With one gold answer per
+        prediction this returns exactly what ``similarity`` returns."""
+        flat, owner = [], []
+        for i, (p, gs) in enumerate(zip(preds, golds)):
+            for g in gs:
+                flat.append((p, g))
+                owner.append(i)
+        best = [0.0] * len(preds)
+        for i, sim in zip(owner, self.similarity(flat) if flat else []):
+            best[i] = max(best[i], sim)
+        return best
+
+    def evaluate_multi(self, preds: Sequence[str], golds: Sequence[Sequence[str]]) -> dict:
+        """``evaluate`` with alias lists; a prediction is "rescued" when no alias is an exact match."""
+        preds, golds = list(preds), [list(g) for g in golds]
+        if not preds:
+            return {"n": 0}
+        sims = self.similarity_multi(preds, golds)
+        match = [sim >= self.threshold for sim in sims]
+        em = [any(exact_match(clean_prediction(p), g) for g in gs) for p, gs in zip(preds, golds)]
+        n = len(preds)
+        return {
+            "n": n,
+            "sem_sim": sum(sims) / n,
+            "sem_match": sum(match) / n,
+            "sem_rescued": sum(m and not e for m, e in zip(match, em)) / n,
+        }
